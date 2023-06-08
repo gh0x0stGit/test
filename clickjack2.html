@@ -7,7 +7,7 @@
         .instagram-embed {
             display: none; /* Hide the desktop version */
         }
-        
+
         /* Styles for Android Firefox */
         @media only screen and (max-width: 768px) {
             .instagram-embed {
@@ -21,10 +21,21 @@
     <!-- Instagram embed for desktop browsers -->
     <div class="instagram-embed">
         <!-- Embed code for desktop browsers -->
-        <iframe src="https://www.instagram.com/p/ABCDEF123456/embed" width="500" height="600" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
+        <iframe src="https://www.instagram.com/" width="500" height="600" frameborder="0" scrolling="no" allowtransparency="true"></iframe>
     </div>
 
     <!-- Add any additional content or elements here -->
 
+    <script>
+        // Check if the user agent matches Android Firefox
+        var isAndroidFirefox = /Android/.test(navigator.userAgent) && /Firefox/.test(navigator.userAgent);
+
+        // If user agent matches, apply specific styles or modifications
+        if (isAndroidFirefox) {
+            var instagramEmbed = document.querySelector('.instagram-embed');
+            instagramEmbed.style.display = 'block';
+            // Add any additional modifications specific to Android Firefox
+        }
+    </script>
 </body>
 </html>
