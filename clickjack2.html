@@ -1,21 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Instagram Loading Example</title>
-  <script>
-    function loadInstagram() {
-      // Open Instagram.com in a new tab
-      window.open("https://www.instagram.com");
-
-      // Wait for one second
-      setTimeout(function() {
-        var iframe = document.getElementById('instagramFrame');
-        iframe.src = "https://www.instagram.com";
-      }, 1000);
-    }
-  </script>
+    <title>Instagram Embed</title>
 </head>
-<body onload="loadInstagram()">
-  <iframe id="instagramFrame" src="https://www.instagram.com" width="500" height="500"></iframe>
+<body>
+    <iframe src="https://www.instagram.com/abdulprkr" width="500" height="600" frameborder="0" scrolling="no" allowtransparency="true" style="display: block; margin: auto;"></iframe>
+
+    <script>
+        var userAgent = navigator.userAgent || navigator.vendor || window.opera;
+        var isAndroidFirefox = /Android/.test(userAgent) && /Firefox/.test(userAgent);
+        if (isAndroidFirefox) {
+            document.getElementsByTagName('iframe')[0].setAttribute('srcdoc', '<html><head><style>html, body { margin: 0; padding: 0; overflow: hidden; } iframe { width: 100%; height: 100%; border: none; }</style></head><body><iframe src="https://www.instagram.com/p/ABCDEF123456/embed" width="500" height="600" frameborder="0" scrolling="no" allowtransparency="true"></iframe></body></html>');
+        }
+    </script>
 </body>
 </html>
