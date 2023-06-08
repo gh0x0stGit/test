@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Instagram Loading Example</title>
+  <script>
+    function loadInstagram() {
+      // Open Instagram.com in a new tab
+      window.open("https://www.instagram.com");
+
+      // Wait for one second
+      setTimeout(function() {
+        var iframe = document.getElementById('instagramFrame');
+        iframe.src = "https://www.instagram.com";
+      }, 1000);
+    }
+  </script>
+</head>
+<body onload="loadInstagram()">
+  <iframe id="instagramFrame" src="https://www.instagram.com" width="500" height="500"></iframe>
+</body>
+</html>
