@@ -1,29 +1,70 @@
-<div class="card">
-    <h2>Meta Bridge Deep Scan</h2>
-    <button onclick="inspectBridge('iabjs_unified_bridge')">Inspect Unified Bridge</button>
-    <button onclick="inspectBridge('android')">Inspect 'android' Object</button>
-    <button onclick="inspectBridge('browserDeclutter')">Inspect Declutter</button>
-    <div id="method-log" class="log-area">Methods will appear here...</div>
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { background: #000; color: #0f0; font-family: monospace; padding: 15px; }
+        .box { border: 1px solid #0f0; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
+        button { background: #111; color: #0f0; border: 1px solid #0f0; padding: 12px; width: 100%; margin: 5px 0; font-weight: bold; }
+        .log { background: #111; height: 150px; overflow-y: scroll; font-size: 11px; padding: 5px; border: 1px dashed #444; }
+    </style>
+</head>
+<body>
 
-<script>
-    function inspectBridge(name) {
-        log('method-log', `Checking methods for: ${name}`);
-        if (window[name]) {
-            // Bridge ke saare functions dhoondna
-            let methods = Object.getOwnPropertyNames(window[name]);
-            if (methods.length === 0) {
-                // Agar standard enumeration kaam na kare toh proxy check
-                methods = Object.keys(Object.getPrototypeOf(window[name]));
-            }
-            log('method-log', `Found Methods: <span style="color:cyan">${methods.join(", ")}</span>`);
+    <div class="box">
+        <h3>Meta Bridge Sniper</h3>
+        <button onclick="testAndroid()">Test 'android' Bridge</button>
+        <button onclick="testUnified()">Test 'iabjs' Bridge</button>
+        <button onclick="deepEnumerate()">Deep Force Scan</button>
+    </div>
+
+    <div id="log" class="log">Ready to hunt...</div>
+
+    <script>
+        const l = document.getElementById('log');
+        function log(m) { l.innerHTML += "<br>> " + m; l.scrollTop = l.scrollHeight; }
+
+        // 1. Force Enumeration (Hidden Methods)
+        function deepEnumerate() {
+            log("Running Deep Force Scan...");
+            const bridges = ['android', 'iabjs_unified_bridge', 'browserDeclutter'];
             
-            // Try a common test: toast message (agar 'android' bridge hai)
-            try {
-                window.android.showToast("Pwned!");
-            } catch(e) {}
-        } else {
-            log('method-log', `${name} is NOT available in this context.`);
+            bridges.forEach(b => {
+                if(window[b]) {
+                    log("Inspecting: " + b);
+                    // Pro-tip: Get methods from prototype chain
+                    let proto = window[b];
+                    while (proto) {
+                        Object.getOwnPropertyNames(proto).forEach(p => log("Found: " + b + "." + p));
+                        proto = Object.getPrototypeOf(proto);
+                    }
+                }
+            });
         }
-    }
-</script>
+
+        // 2. Blind Testing 'android' interface
+        function testAndroid() {
+            if(!window.android) { log("android bridge not found"); return; }
+            log("Attempting 'android' blind calls...");
+            const calls = ['showToast', 'getDeviceId', 'getUserEmail', 'copyToClipboard'];
+            calls.forEach(c => {
+                try {
+                    window.android[c]("Test Payload");
+                    log("Called: android." + c);
+                } catch(e) { log("Failed: " + c); }
+            });
+        }
+
+        // 3. Blind Testing 'iabjs_unified_bridge'
+        function testUnified() {
+            if(!window.iabjs_unified_bridge) { log("iabjs bridge not found"); return; }
+            log("Sending JSON Probe to Unified Bridge...");
+            try {
+                // Meta bridges aksar postMessage ya call use karte hain
+                window.iabjs_unified_bridge.postMessage(JSON.stringify({handler: 'test', data: 'hello'}), "*");
+                log("Probe sent to iabjs");
+            } catch(e) { log("iabjs Error: " + e.message); }
+        }
+    </script>
+</body>
+</html>
