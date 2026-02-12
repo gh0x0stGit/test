@@ -1,0 +1,29 @@
+<div class="card">
+    <h2>Meta Bridge Deep Scan</h2>
+    <button onclick="inspectBridge('iabjs_unified_bridge')">Inspect Unified Bridge</button>
+    <button onclick="inspectBridge('android')">Inspect 'android' Object</button>
+    <button onclick="inspectBridge('browserDeclutter')">Inspect Declutter</button>
+    <div id="method-log" class="log-area">Methods will appear here...</div>
+</div>
+
+<script>
+    function inspectBridge(name) {
+        log('method-log', `Checking methods for: ${name}`);
+        if (window[name]) {
+            // Bridge ke saare functions dhoondna
+            let methods = Object.getOwnPropertyNames(window[name]);
+            if (methods.length === 0) {
+                // Agar standard enumeration kaam na kare toh proxy check
+                methods = Object.keys(Object.getPrototypeOf(window[name]));
+            }
+            log('method-log', `Found Methods: <span style="color:cyan">${methods.join(", ")}</span>`);
+            
+            // Try a common test: toast message (agar 'android' bridge hai)
+            try {
+                window.android.showToast("Pwned!");
+            } catch(e) {}
+        } else {
+            log('method-log', `${name} is NOT available in this context.`);
+        }
+    }
+</script>
