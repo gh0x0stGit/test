@@ -1,0 +1,35 @@
+<div class="card">
+    <h3>7. Advanced: Tab-Nabbing Attack</h3>
+    <p>Check if this page can hijack the opener window.</p>
+    <button class="btn" onclick="testTabNabbing()">Test Tab-Nabbing</button>
+</div>
+
+<div class="card">
+    <h3>8. Android Content Provider Test</h3>
+    <p>Testing access to sensitive system providers.</p>
+    <a href="content://contacts/people/" class="btn btn-red">Try Access Contacts</a>
+    <a href="content://sms/inbox" class="btn btn-red">Try Access SMS</a>
+</div>
+
+<div class="card">
+    <h3>9. Bridge Method Fuzzing</h3>
+    <p>Attempt to list all methods of the detected Bridge.</p>
+    <button class="btn" onclick="fuzzBridge()">Fuzz 'iabjs_unified_bridge'</button>
+    <div id="fuzz-res" class="result-box"></div>
+</div>
+
+<script>
+function testTabNabbing() {
+    alert("Check if the previous tab/window redirects after this!");
+    if (window.opener) window.opener.location = "https://google.com";
+}
+
+function fuzzBridge() {
+    try {
+        let methods = Object.getOwnPropertyNames(iabjs_unified_bridge);
+        document.getElementById('fuzz-res').innerText = "Methods: " + methods.join(", ");
+    } catch(e) {
+        document.getElementById('fuzz-res').innerText = "Bridge not accessible or error: " + e;
+    }
+}
+</script>
