@@ -43,7 +43,7 @@
             // Onerror ka matlab hai 404, 403, ya Connection Refused
             img.onerror = () => resolve(false);
             
-            img.src = `http://127.0.0.1:8080${path}?verify=${Date.now()}`;
+            img.src = `http://127.0.0.1/${path}?verify=${Date.now()}`;
             
             // 2 second ka timeout agar port block ho toh
             setTimeout(() => resolve(false), 2000);
