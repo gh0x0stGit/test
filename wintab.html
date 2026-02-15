@@ -1,29 +1,71 @@
-<div class="card">
-    <h2>Stealth Port Scanner (No-Prompt)</h2>
-    <button onclick="stealthScan()">Run Stealth Scan</button>
-    <div id="results" style="color: yellow; margin-top: 10px;"></div>
-</div>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Confirmed Windows Discovery Lab</title>
+    <style>
+        body { background: #050505; color: #00ff00; font-family: 'Consolas', monospace; padding: 25px; }
+        .card { border: 1px solid #333; padding: 20px; background: #111; border-radius: 8px; }
+        button { background: #111; color: #00ff00; border: 1px solid #00ff00; padding: 12px; cursor: pointer; width: 100%; font-weight: bold; }
+        .log { background: #000; height: 300px; overflow-y: auto; border: 1px dashed #444; padding: 15px; font-size: 12px; margin-top: 15px; }
+        .confirmed { color: #ff3e3e; font-weight: bold; }
+        .false { color: #555; }
+    </style>
+</head>
+<body>
 
-<script>
-function stealthScan() {
-    const ports = [6463, 3000, 8080, 5000]; // Discord, etc.
-    const results = document.getElementById('results');
-    
-    ports.forEach(port => {
-        const start = performance.now();
-        // Image tag fetch alerts ko trigger nahi karta aksar
-        const img = new Image();
-        
-        img.onload = img.onerror = () => {
-            const end = performance.now();
-            const duration = end - start;
-            // Agar port open hai, toh response fast (ya specific error) aayega
-            if (duration < 100) { 
-                results.innerHTML += `<br>Port ${port} is likely ACTIVE (Time: ${duration.toFixed(2)}ms)`;
+    <div class="card">
+        <h2>Advanced Differential Port Scanner</h2>
+        <p>Checking ports by comparing against a known dead port (9999).</p>
+        <button onclick="runDifferentialScan()">Run Verified Scan</button>
+        <div id="console" class="log">Awaiting command...</div>
+    </div>
+
+    <script>
+        const logBox = document.getElementById('console');
+        function log(m, type='') {
+            const cls = type === 'confirmed' ? 'confirmed' : (type === 'false' ? 'false' : '');
+            logBox.innerHTML += `<div class="${cls}">> ${m}</div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+        }
+
+        async function getTiming(port) {
+            const start = performance.now();
+            try {
+                // cache: 'no-store' is important to prevent false fast results
+                await fetch(`http://127.0.0.1:${port}`, { mode: 'no-cors', cache: 'no-store' });
+            } catch (e) {
+                // Error string capture for further analysis
             }
-        };
-        
-        img.src = `http://127.0.0.1:${port}/favicon.ico?t=${start}`;
-    });
-}
-</script>
+            return performance.now() - start;
+        }
+
+        async function runDifferentialScan() {
+            const testPorts = [6463, 3000, 8080, 5000];
+            const deadPort = 9999;
+            
+            log("Calibrating baseline with Dead Port (9999)...");
+            let baseline = 0;
+            for(let i=0; i<3; i++) baseline += await getTiming(deadPort);
+            baseline = baseline / 3;
+            log(`Baseline (Closed Port): ${baseline.toFixed(2)}ms`);
+
+            for (let port of testPorts) {
+                log(`Scanning Port ${port}...`);
+                let portTime = 0;
+                // Multiple samples to beat the jitter
+                for(let i=0; i<3; i++) portTime += await getTiming(port);
+                portTime = portTime / 3;
+
+                const diff = Math.abs(portTime - baseline);
+                
+                // Agar timing ka farq 5ms se zyada hai, toh kuch real discovery ho sakti hai
+                if (diff > 5) {
+                    log(`PORT ${port} - DIFFERENTIAL DETECTED! (Diff: ${diff.toFixed(2)}ms)`, 'confirmed');
+                } else {
+                    log(`Port ${port} - Likely Closed (Timing matches baseline)`, 'false');
+                }
+            }
+        }
+    </script>
+</body>
+</html>
