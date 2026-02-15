@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Windows Browser Research Lab</title>
+    <style>
+        body { background: #0c0c0c; color: #00ff00; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 25px; }
+        .card { border: 1px solid #333; padding: 20px; margin-bottom: 20px; background: #111; box-shadow: 0 0 10px #00ff0033; }
+        button { background: #111; color: #00ff00; border: 1px solid #00ff00; padding: 12px; width: 100%; margin: 10px 0; cursor: pointer; font-family: monospace; }
+        button:hover { background: #00ff00; color: #000; }
+        .log { background: #000; height: 200px; overflow-y: auto; border: 1px dashed #444; padding: 10px; font-size: 12px; color: #0af; }
+    </style>
+</head>
+<body>
+
+    <div class="card">
+        <h2>Windows Protocol Research</h2>
+        <button onclick="testProtocol('ms-settings:about')">1. Trigger Windows Settings</button>
+        <button onclick="testProtocol('ms-calculator:')">2. Trigger Calculator (App Launch)</button>
+        <button onclick="testFileAccess()">3. Test Local File Read (etc/hosts)</button>
+    </div>
+
+    <div class="card">
+        <h2>Cross-Origin / Tab Hijack</h2>
+        <button onclick="testOpener()">Test window.opener Leak</button>
+    </div>
+
+    <div id="log" class="log">Ready for Windows Research...</div>
+
+    <script>
+        const log = (m) => { document.getElementById('log').innerHTML += `<br>> [${new Date().toLocaleTimeString()}] ${m}`; };
+
+        // 1. Windows Protocol Testing
+        function testProtocol(uri) {
+            log(`Attempting to trigger: ${uri}`);
+            window.location.href = uri;
+            // Agar bina confirmation pop-up ke app khul gayi, toh ye ek issue hai.
+        }
+
+        // 2. Local File Access (Path Traversal Test)
+        function testFileAccess() {
+            log("Attempting to read C:/Windows/System32/drivers/etc/hosts");
+            const xhr = new XMLHttpRequest();
+            // Windows browsers block file:// from http/https, but we check for bypasses
+            xhr.open('GET', 'file:///C:/Windows/System32/drivers/etc/hosts', true);
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState == 4) {
+                    if (xhr.status == 200) log("LEAK SUCCESS: File Content Read!", "red");
+                    else log("Blocked: Browser SOP restricted file:// access.");
+                }
+            };
+            xhr.send();
+        }
+
+        // 3. Tabnabbing for Windows
+        function testOpener() {
+            log("Opening child tab...");
+            let child = window.open("https://example.com", "_blank");
+            setTimeout(() => {
+                if (child && !child.closed) {
+                    log("Testing if child can control parent...");
+                    // Try to redirect the current page from the child (if vulnerable)
+                }
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
