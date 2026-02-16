@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Windows Browser Security Auditor</title>
+    <style>
+        body { background: #0f172a; color: #f8fafc; font-family: 'Segoe UI', sans-serif; padding: 20px; }
+        .card { background: #1e293b; border: 1px solid #334155; padding: 20px; border-radius: 12px; margin-bottom: 20px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); }
+        h2 { color: #38bdf8; margin-top: 0; }
+        .btn { background: #38bdf8; color: #0f172a; border: none; padding: 10px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; transition: 0.3s; }
+        .btn:hover { background: #7dd3fc; }
+        .log { background: #000; color: #4ade80; padding: 10px; margin-top: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; min-height: 40px; }
+        .danger { color: #f87171; }
+    </style>
+</head>
+<body>
+
+    <h1>Windows Sandbox & Navigation Auditor</h1>
+    <hr style="border: 0.5px solid #334155; margin-bottom: 30px;">
+
+    <div class="card">
+        <h2>1. Iframe Sandbox Escape</h2>
+        <p>Checks if an iframe can hijack the top window's URL without permission.</p>
+        <button class="btn" onclick="testIframeEscape()">Execute Escape Test</button>
+        <div class="log" id="log1">> Waiting for trigger...</div>
+        <div id="iframeContainer" style="margin-top: 10px;"></div>
+    </div>
+
+    <div class="card">
+        <h2>2. TabNabbing Auditor</h2>
+        <p>Checks if a newly opened tab can change the URL of this original page.</p>
+        <button class="btn" onclick="testTabNab()">Test Opener Hijack</button>
+        <div class="log" id="log2">> Awaiting new tab...</div>
+    </div>
+
+    <div class="card">
+        <h2>3. Cross-Domain Info Leak</h2>
+        <p>Checks if sensitive data in 'window.name' persists across different domains.</p>
+        <button class="btn" onclick="testNameLeak()">Test Name Persistence</button>
+        <div class="log" id="log3">> Status: Ready</div>
+    </div>
+
+    <div class="card">
+        <h2>4. Protocol Execution Bypass</h2>
+        <p>Tests if 'javascript:' URIs can execute via Meta Refresh or Data URIs.</p>
+        <button class="btn" onclick="testProtocolBypass()">Test Script Execution</button>
+        <div class="log" id="log4">> Ready</div>
+    </div>
+
+    <script>
+        // 1. Iframe Escape Logic
+        function testIframeEscape() {
+            const container = document.getElementById('iframeContainer');
+            document.getElementById('log1').innerText = "> Injecting Sandboxed Iframe...";
+            
+            // Note: If 'allow-top-navigation' is NOT present but it still navigates, it's a HUGE bug.
+            const iframeHTML = `
+                <iframe srcdoc="<html><body><script>
+                    setTimeout(() => {
+                        try {
+                            window.top.location = 'https://www.bing.com';
+                        } catch(e) {
+                            parent.postMessage('blocked', '*');
+                        }
+                    }, 2000);
+                <\/script><p>Escaping in 2 seconds...</p></body></html>" 
+                sandbox="allow-scripts" 
+                style="width:100%; height:60px; border:1px dashed #38bdf8;"></iframe>`;
+            
+            container.innerHTML = iframeHTML;
+        }
+
+        // 2. TabNabbing Logic
+        function testTabNab() {
+            document.getElementById('log2').innerText = "> Opening Tab... Check this page in 3 seconds.";
+            const newWin = window.open("", "_blank");
+            newWin.document.write(`
+                <html><body>
+                <h1>New Tab Opened</h1>
+                <script>
+                    setTimeout(() => {
+                        if (window.opener) {
+                            window.opener.location.href = "https://www.google.com/search?q=Hijacked+by+TabNabbing";
+                        }
+                    }, 3000);
+                <\/script>
+                </body></html>
+            `);
+        }
+
+        // 3. Name Leak Logic
+        function testNameLeak() {
+            window.name = "CRITICAL_SESSION_TOKEN_99999";
+            document.getElementById('log3').innerText = "> window.name set. Redirecting to Bing...";
+            setTimeout(() => {
+                window.location.href = "https://www.bing.com";
+            }, 1500);
+        }
+
+        // 4. Protocol Bypass
+        function testProtocolBypass() {
+            document.getElementById('log4').innerHTML = "> Testing Meta Refresh + JS URI...";
+            const dataUri = "data:text/html,<html><body><script>alert('Data_URI_Executed')<\/script></body></html>";
+            const ifr = document.createElement('iframe');
+            ifr.src = dataUri;
+            ifr.style.display = "none";
+            document.body.appendChild(ifr);
+        }
+
+        // Listener for iframe escape attempt
+        window.addEventListener('message', function(e) {
+            if (e.data === 'blocked') {
+                document.getElementById('log1').innerHTML = "<span class='danger'>[!] Navigation Blocked (Secure)</span>";
+            }
+        });
+    </script>
+</body>
+</html>
