@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LNA Hybrid Auditor v7.0</title>
+    <style>
+        body { background: #000; color: #0f0; font-family: monospace; padding: 20px; }
+        .success { color: #00ff00; font-weight: bold; }
+        .notfound { color: #ff0055; font-weight: bold; }
+        .console { border: 1px solid #0f0; padding: 15px; background: #050505; max-width: 800px; margin: auto; }
+        button { background: #0f0; color: #000; border: none; padding: 12px; width: 100%; cursor: pointer; font-weight: bold; }
+    </style>
+</head>
+<body>
+
+<div class="console">
+    <h2>LNA HYBRID PATH AUDITOR (v7.0 - Precision Status)</h2>
+    <p>Using Object-Data Logic to differentiate 200 OK from 404 Not Found.</p>
+    <button onclick="runAudit()">RUN SCAN</button>
+    <div id="display" style="margin-top:20px;"></div>
+</div>
+
+<script>
+    const targetPaths = [
+        "/favicon.ico", 
+        "/dashboard/phpinfo.php", 
+        "/phpmyadmin/index.php", 
+        "/server-statufs", // Wrong path test
+        "/icons/apache_p2.gif"
+    ];
+
+    function verifyStatus(url) {
+        return new Promise((resolve) => {
+            // Using <object> tag as it triggers different events for 200 vs 404
+            const obj = document.createElement('object');
+            obj.style.display = 'none';
+            obj.data = url;
+
+            const timeout = setTimeout(() => {
+                cleanup();
+                resolve("404 Not Found (Timeout)");
+            }, 1500);
+
+            function cleanup() {
+                clearTimeout(timeout);
+                obj.onload = null;
+                obj.onerror = null;
+                if (obj.parentNode) document.body.removeChild(obj);
+            }
+
+            obj.onload = () => {
+                cleanup();
+                resolve("200 OK (Found)");
+            };
+
+            obj.onerror = () => {
+                cleanup();
+                resolve("404 Not Found");
+            };
+
+            document.body.appendChild(obj);
+        });
+    }
+
+    async function runAudit() {
+        const display = document.getElementById('display');
+        const port = 4444; 
+        display.innerHTML = `[!] Auditing 127.0.0.1:${port}...<br><br>`;
+
+        for (let path of targetPaths) {
+            const url = `http://127.0.0.1:${port}${path}`;
+            const result = await verifyStatus(url);
+            
+            let statusClass = (result.includes("200")) ? "success" : "notfound";
+            display.innerHTML += `<div>Path: ${path} -> <span class="${statusClass}">${result}</span></div>`;
+        }
+    }
+</script>
+</body>
+</html>
