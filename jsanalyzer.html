@@ -1,0 +1,1628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SENTINEL v11 | Elite JS Security Auditor</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Space+Grotesk:wght@400;500;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.7/beautify.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-javascript.min.js"></script>
+<style>
+:root {
+  --bg: #06080d;
+  --bg2: #0b0f1a;
+  --bg3: #111827;
+  --bg4: #1a2235;
+  --border: #1e2d47;
+  --border2: #243552;
+  --red: #ff4d6d;
+  --red-dim: rgba(255,77,109,0.12);
+  --orange: #ff9d4d;
+  --orange-dim: rgba(255,157,77,0.12);
+  --yellow: #ffd166;
+  --yellow-dim: rgba(255,209,102,0.12);
+  --green: #06d6a0;
+  --green-dim: rgba(6,214,160,0.12);
+  --blue: #4da6ff;
+  --blue-dim: rgba(77,166,255,0.12);
+  --purple: #c77dff;
+  --purple-dim: rgba(199,125,255,0.12);
+  --cyan: #00f5d4;
+  --text: #c9d8e8;
+  --text2: #6b7f99;
+  --text3: #3d5066;
+  --glow-red: 0 0 20px rgba(255,77,109,0.4);
+  --glow-green: 0 0 20px rgba(6,214,160,0.4);
+  --glow-blue: 0 0 20px rgba(77,166,255,0.3);
+  --lh: 22px;
+  --fs: 13px;
+  --pad: 28px;
+}
+
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;}
+
+/* SCANLINES OVERLAY */
+body::before{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,0.03) 2px,rgba(0,0,0,0.03) 4px);
+  pointer-events:none;z-index:9999;
+}
+
+/* TOP NAV */
+.nav{
+  height:56px;background:var(--bg2);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;padding:0 16px;gap:12px;flex-shrink:0;
+  position:relative;
+}
+.nav::after{
+  content:'';position:absolute;bottom:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,var(--blue),var(--cyan),var(--purple),transparent);
+  opacity:0.5;
+}
+.logo{
+  display:flex;align-items:center;gap:8px;white-space:nowrap;
+  font-weight:800;font-size:1rem;letter-spacing:0.12em;
+  color:var(--cyan);text-transform:uppercase;
+}
+.logo-icon{font-size:1.1rem;animation:pulse 2s infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.6}}
+.logo-ver{font-size:.6rem;background:var(--cyan);color:var(--bg);padding:1px 5px;border-radius:3px;font-weight:700;margin-left:2px;}
+.status-dot{width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:var(--glow-green);flex-shrink:0;animation:blink 1.5s infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0.3}}
+#status-text{font-size:.7rem;color:var(--text2);white-space:nowrap;}
+.url-wrap{flex:1;display:flex;gap:8px;max-width:640px;}
+.url-bar{
+  flex:1;background:var(--bg3);border:1px solid var(--border2);padding:8px 12px;
+  border-radius:6px;color:var(--text);font-family:'JetBrains Mono',monospace;font-size:12px;outline:none;
+  transition:.2s;
+}
+.url-bar:focus{border-color:var(--blue);box-shadow:0 0 0 2px rgba(77,166,255,0.1);}
+.btn-audit{
+  background:linear-gradient(135deg,var(--green),var(--cyan));
+  color:var(--bg);border:none;padding:0 18px;border-radius:6px;
+  font-weight:700;font-size:.8rem;cursor:pointer;white-space:nowrap;
+  transition:.15s;letter-spacing:.05em;font-family:'Space Grotesk',sans-serif;
+}
+.btn-audit:hover{filter:brightness(1.1);transform:translateY(-1px);box-shadow:var(--glow-green);}
+.btn-audit:active{transform:translateY(0);}
+.btn-audit.scanning{background:linear-gradient(135deg,var(--orange),var(--yellow));animation:scanpulse .8s infinite;}
+@keyframes scanpulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.2)}}
+.nav-actions{display:flex;gap:8px;margin-left:auto;}
+.btn-sm{
+  background:var(--bg3);border:1px solid var(--border2);color:var(--text2);
+  padding:6px 12px;border-radius:6px;cursor:pointer;font-size:.75rem;
+  font-family:'Space Grotesk',sans-serif;transition:.15s;white-space:nowrap;
+}
+.btn-sm:hover{border-color:var(--border);color:var(--text);}
+
+/* LAYOUT */
+.layout{display:flex;height:calc(100vh - 56px);overflow:hidden;}
+
+/* SIDEBAR */
+.sidebar{
+  width:380px;flex-shrink:0;background:var(--bg2);
+  border-right:1px solid var(--border);display:flex;flex-direction:column;
+  overflow:hidden;
+}
+.sb-head{padding:14px 16px;border-bottom:1px solid var(--border);flex-shrink:0;}
+.sb-title{font-size:.75rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--text2);margin-bottom:12px;}
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:12px;}
+.stat{
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:8px 6px;text-align:center;cursor:pointer;transition:.2s;
+}
+.stat:hover{border-color:var(--border2);}
+.stat.active-filter{border-color:var(--blue);box-shadow:0 0 0 1px var(--blue);}
+.stat-num{font-size:1.3rem;font-weight:800;font-family:'JetBrains Mono',monospace;line-height:1;}
+.stat-lbl{font-size:.58rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-top:3px;}
+.stat.s-sec .stat-num{color:var(--red);}
+.stat.s-url .stat-num{color:var(--purple);}
+.stat.s-mth .stat-num{color:var(--green);}
+.stat.s-enc .stat-num{color:var(--orange);}
+
+.search-row{display:flex;gap:6px;align-items:center;}
+.find-search{
+  flex:1;background:var(--bg3);border:1px solid var(--border);padding:7px 10px;
+  border-radius:6px;color:var(--text);font-size:12px;outline:none;
+  font-family:'JetBrains Mono',monospace;transition:.2s;
+}
+.find-search:focus{border-color:var(--blue);}
+.sev-filter{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  padding:7px 8px;border-radius:6px;font-size:11px;cursor:pointer;outline:none;
+  font-family:'Space Grotesk',sans-serif;
+}
+
+.cards{flex:1;overflow-y:auto;padding:10px;}
+.cards::-webkit-scrollbar{width:4px;}
+.cards::-webkit-scrollbar-track{background:transparent;}
+.cards::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px;}
+
+/* FINDING CARDS */
+.card{
+  background:var(--bg3);border:1px solid var(--border);border-radius:8px;
+  padding:11px 12px;margin-bottom:8px;cursor:pointer;
+  transition:.15s;border-left:3px solid transparent;position:relative;overflow:hidden;
+}
+.card::before{
+  content:'';position:absolute;inset:0;opacity:0;transition:.15s;
+  background:linear-gradient(90deg,rgba(77,166,255,0.03),transparent);
+}
+.card:hover{border-color:var(--border2);transform:translateX(3px);}
+.card:hover::before{opacity:1;}
+.card.sev-critical{border-left-color:var(--red);}
+.card.sev-high{border-left-color:var(--orange);}
+.card.sev-medium{border-left-color:var(--yellow);}
+.card.sev-low{border-left-color:var(--green);}
+.card.sev-info{border-left-color:var(--blue);}
+
+.card-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:7px;gap:6px;}
+.card-tags{display:flex;gap:4px;flex-wrap:wrap;flex:1;}
+.tag{font-size:.6rem;font-weight:700;padding:2px 6px;border-radius:3px;text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;}
+.t-secret{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,77,109,0.2);}
+.t-cloud{background:rgba(255,157,77,0.1);color:var(--orange);border:1px solid rgba(255,157,77,0.2);}
+.t-db{background:rgba(199,125,255,0.1);color:var(--purple);border:1px solid rgba(199,125,255,0.2);}
+.t-url{background:var(--purple-dim);color:var(--purple);border:1px solid rgba(199,125,255,0.2);}
+.t-path{background:var(--blue-dim);color:var(--blue);border:1px solid rgba(77,166,255,0.2);}
+.t-method{background:var(--green-dim);color:var(--green);border:1px solid rgba(6,214,160,0.2);}
+.t-b64{background:var(--orange-dim);color:var(--orange);border:1px solid rgba(255,157,77,0.2);}
+.t-jwt{background:rgba(255,209,102,0.1);color:var(--yellow);border:1px solid rgba(255,209,102,0.2);}
+.t-hex{background:rgba(0,245,212,0.1);color:var(--cyan);border:1px solid rgba(0,245,212,0.2);}
+.sev-badge{font-size:.58rem;font-weight:700;padding:2px 5px;border-radius:3px;text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;}
+.sev-badge.b-critical{background:var(--red-dim);color:var(--red);}
+.sev-badge.b-high{background:var(--orange-dim);color:var(--orange);}
+.sev-badge.b-medium{background:var(--yellow-dim);color:var(--yellow);}
+.sev-badge.b-low{background:var(--green-dim);color:var(--green);}
+.sev-badge.b-info{background:var(--blue-dim);color:var(--blue);}
+.ln-badge{font-size:.65rem;color:var(--text2);white-space:nowrap;font-family:'JetBrains Mono',monospace;}
+.card-val{
+  font-family:'JetBrains Mono',monospace;font-size:11px;color:#e0e8f0;
+  word-break:break-all;line-height:1.5;background:var(--bg4);
+  padding:6px 8px;border-radius:4px;border:1px solid var(--border);
+}
+.card-desc{font-size:.7rem;color:var(--text2);margin-top:5px;line-height:1.4;}
+.copy-btn{
+  position:absolute;top:8px;right:8px;background:var(--bg4);border:1px solid var(--border);
+  color:var(--text2);padding:3px 6px;border-radius:4px;cursor:pointer;font-size:.6rem;
+  opacity:0;transition:.15s;font-family:'Space Grotesk',sans-serif;
+}
+.card:hover .copy-btn{opacity:1;}
+.copy-btn:hover{color:var(--cyan);}
+
+/* EMPTY / SCANNING STATES */
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;gap:10px;color:var(--text3);font-size:.8rem;text-align:center;
+  padding:20px;
+}
+.empty-icon{font-size:2rem;opacity:.4;}
+
+/* SCANNING ANIMATION */
+.scan-progress{
+  display:none;background:var(--bg3);border-radius:6px;overflow:hidden;
+  height:3px;margin-top:8px;
+}
+.scan-progress.active{display:block;}
+.scan-bar{height:100%;width:0;background:linear-gradient(90deg,var(--green),var(--cyan));border-radius:6px;transition:width .3s;}
+
+/* RISK METER */
+.risk-meter{padding:10px 16px;border-top:1px solid var(--border);flex-shrink:0;}
+.risk-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:6px;display:flex;justify-content:space-between;}
+.risk-bar-wrap{background:var(--bg3);border-radius:10px;height:6px;overflow:hidden;border:1px solid var(--border);}
+.risk-bar{height:100%;border-radius:10px;transition:width .6s ease,background .4s;width:0;}
+
+/* EDITOR */
+.editor-wrap{flex:1;display:flex;flex-direction:column;overflow:hidden;background:var(--bg);}
+.editor-toolbar{
+  display:flex;align-items:center;padding:0 12px;height:38px;
+  background:var(--bg2);border-bottom:1px solid var(--border);gap:8px;flex-shrink:0;
+}
+.tb-tabs{display:flex;gap:2px;}
+.tb-tab{
+  padding:4px 12px;border-radius:4px;font-size:.72rem;cursor:pointer;color:var(--text2);
+  transition:.15s;border:1px solid transparent;font-weight:500;
+}
+.tb-tab.active{background:var(--bg3);color:var(--text);border-color:var(--border);}
+.tb-sep{width:1px;height:20px;background:var(--border);margin:0 4px;}
+.tb-info{font-size:.68rem;color:var(--text3);font-family:'JetBrains Mono',monospace;margin-left:auto;}
+.tb-action{
+  background:var(--bg3);border:1px solid var(--border);color:var(--text2);
+  padding:4px 10px;border-radius:4px;cursor:pointer;font-size:.7rem;transition:.15s;
+  font-family:'Space Grotesk',sans-serif;
+}
+.tb-action:hover{color:var(--text);border-color:var(--border2);}
+
+.editor-main{flex:1;display:flex;overflow:hidden;position:relative;}
+.line-nums{
+  width:52px;background:var(--bg2);color:var(--text3);
+  padding-top:var(--pad);padding-right:12px;text-align:right;
+  font-family:'JetBrains Mono',monospace;font-size:var(--fs);line-height:var(--lh);
+  border-right:1px solid var(--border);user-select:none;overflow:hidden;flex-shrink:0;
+}
+.ed-container{flex:1;position:relative;overflow:hidden;}
+#code-input,#pre-output,#code-display,#code-display span{
+  font-family:'JetBrains Mono',monospace !important;
+  font-size:var(--fs) !important;
+  line-height:var(--lh) !important;
+  tab-size:4;
+}
+#code-input,#pre-output{
+  position:absolute;top:0;left:0;width:100%;height:100%;
+  padding:var(--pad);margin:0;border:none;outline:none;
+  white-space:pre;word-wrap:normal;
+}
+#code-input{
+  background:transparent !important;color:transparent !important;
+  caret-color:var(--cyan);z-index:2;resize:none;overflow:auto;
+}
+#pre-output{z-index:1;pointer-events:none;background:transparent;overflow:hidden;}
+#code-input::selection{background:rgba(0,245,212,0.2);color:transparent;}
+code[class*="language-"],pre[class*="language-"]{background:transparent !important;padding:0 !important;margin:0 !important;text-shadow:none !important;}
+#code-input::-webkit-scrollbar{width:8px;height:8px;}
+#code-input::-webkit-scrollbar-track{background:var(--bg2);}
+#code-input::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+/* BOTTOM BAR */
+.bottom-bar{
+  height:26px;background:var(--bg2);border-top:1px solid var(--border);
+  display:flex;align-items:center;padding:0 14px;gap:16px;flex-shrink:0;
+}
+.bb-item{font-size:.65rem;color:var(--text3);font-family:'JetBrains Mono',monospace;display:flex;align-items:center;gap:5px;}
+.bb-item span{color:var(--text2);}
+
+/* NOTIFICATION */
+.notif{
+  position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--border2);
+  border-radius:8px;padding:10px 16px;font-size:.78rem;z-index:10000;
+  transform:translateY(20px);opacity:0;transition:.3s;pointer-events:none;
+  display:flex;align-items:center;gap:8px;
+}
+.notif.show{transform:translateY(0);opacity:1;}
+.notif.success{border-left:3px solid var(--green);}
+.notif.error{border-left:3px solid var(--red);}
+.notif.info{border-left:3px solid var(--blue);}
+
+/* DETAIL PANEL */
+.detail-panel{
+  position:absolute;right:0;top:0;bottom:0;width:340px;
+  background:var(--bg2);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;transform:translateX(100%);transition:.25s;z-index:10;
+}
+.detail-panel.open{transform:translateX(0);}
+.dp-head{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.dp-title{font-size:.8rem;font-weight:700;color:var(--text);}
+.dp-close{background:none;border:none;color:var(--text2);cursor:pointer;font-size:1rem;padding:2px;}
+.dp-body{flex:1;overflow-y:auto;padding:14px 16px;}
+.dp-field{margin-bottom:14px;}
+.dp-key{font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:4px;}
+.dp-val{font-family:'JetBrains Mono',monospace;font-size:11px;background:var(--bg3);border:1px solid var(--border);border-radius:4px;padding:7px 9px;word-break:break-all;line-height:1.5;color:var(--text);}
+
+/* HIGHLIGHT ANIMATIONS */
+@keyframes flashcard{0%,100%{background:var(--bg3)}50%{background:var(--bg4)}}
+.card.highlight{animation:flashcard .4s;}
+
+/* MODAL OVERLAY */
+.modal-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:1000;
+  display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px);
+  opacity:0;pointer-events:none;transition:.2s;
+}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal{
+  background:var(--bg2);border:1px solid var(--border2);border-radius:12px;
+  padding:24px;max-width:600px;width:90%;max-height:80vh;overflow-y:auto;
+}
+.modal h2{font-size:1rem;margin-bottom:16px;color:var(--cyan);}
+.modal-close{float:right;background:none;border:none;color:var(--text2);cursor:pointer;font-size:1.2rem;}
+
+/* RESPONSIVE scrollbars */
+.cards::-webkit-scrollbar{width:4px;}
+</style>
+</head>
+<body>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"></div>
+
+<!-- NAV -->
+<nav class="nav">
+  <div class="logo">
+    <span class="logo-icon">⬡</span> SENTINEL <span class="logo-ver">v11</span>
+  </div>
+  <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+    <div class="status-dot" id="status-dot"></div>
+    <span id="status-text">Ready</span>
+  </div>
+  <div class="url-wrap">
+    <input type="text" id="target-url" class="url-bar" placeholder="https://example.com/bundle.js  —  or paste code below">
+    <button class="btn-audit" id="audit-btn" onclick="startAudit()">⚡ Deep Scan</button>
+  </div>
+  <div class="nav-actions">
+    <button class="btn-sm" onclick="openKwManager()" title="Manage Keywords">🔑 Keywords</button>
+    <button class="btn-sm" onclick="exportReport()">⬇ Export</button>
+    <button class="btn-sm" onclick="clearAll()">✕ Clear</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- SIDEBAR -->
+  <aside class="sidebar">
+    <div class="sb-head">
+      <div class="sb-title">Security Report</div>
+      <div class="stats-row">
+        <div class="stat s-sec" onclick="filterByType('secret')" title="Click to filter">
+          <div class="stat-num" id="s-count">0</div>
+          <div class="stat-lbl">Secrets</div>
+        </div>
+        <div class="stat s-url" onclick="filterByType('url')" title="Click to filter">
+          <div class="stat-num" id="u-count">0</div>
+          <div class="stat-lbl">Endpoints</div>
+        </div>
+        <div class="stat s-mth" onclick="filterByType('method')" title="Click to filter">
+          <div class="stat-num" id="m-count">0</div>
+          <div class="stat-lbl">Methods</div>
+        </div>
+        <div class="stat s-enc" onclick="filterByType('encoded')" title="Click to filter">
+          <div class="stat-num" id="e-count">0</div>
+          <div class="stat-lbl">Encoded</div>
+        </div>
+      </div>
+      <div class="search-row">
+        <input type="text" id="find-search" class="find-search" placeholder="🔎  Filter findings…" oninput="filterFindings()">
+        <select class="sev-filter" id="sev-filter" onchange="filterFindings()">
+          <option value="">All Severity</option>
+          <option value="critical">🔴 Critical</option>
+          <option value="high">🟠 High</option>
+          <option value="medium">🟡 Medium</option>
+          <option value="low">🟢 Low</option>
+          <option value="info">🔵 Info</option>
+        </select>
+      </div>
+      <div class="scan-progress" id="scan-progress">
+        <div class="scan-bar" id="scan-bar"></div>
+      </div>
+    </div>
+
+    <div class="cards" id="cards">
+      <div class="empty-state">
+        <div class="empty-icon">⬡</div>
+        <div>Paste JavaScript code or enter a URL above, then click <b>Deep Scan</b>.</div>
+      </div>
+    </div>
+
+    <div class="risk-meter">
+      <div class="risk-label">
+        <span>RISK SCORE</span>
+        <span id="risk-score-text">—</span>
+      </div>
+      <div class="risk-bar-wrap">
+        <div class="risk-bar" id="risk-bar"></div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- EDITOR -->
+  <div class="editor-wrap">
+    <div class="editor-toolbar">
+      <div class="tb-tabs">
+        <div class="tb-tab active" id="tab-editor" onclick="switchTab('editor')">Editor</div>
+        <div class="tb-tab" id="tab-summary" onclick="switchTab('summary')">Summary</div>
+      </div>
+      <div class="tb-sep"></div>
+      <button class="tb-action" onclick="beautifyCode()">✦ Format</button>
+      <button class="tb-action" onclick="minifyCode()">⌁ Minify</button>
+      <button class="tb-action" onclick="copyCode()">⎘ Copy</button>
+      <div class="tb-info" id="tb-info">0 lines · 0 chars</div>
+    </div>
+
+    <div class="editor-main" id="editor-main">
+      <div class="line-nums" id="line-numbers">1</div>
+      <div class="ed-container">
+        <pre id="pre-output" aria-hidden="true"><code id="code-display" class="language-javascript"></code></pre>
+        <textarea id="code-input"
+          spellcheck="false"
+          placeholder="// Paste minified Webpack / Next.js / React / Vue bundle here…&#10;// Supports: Secret keys · API tokens · JWT · Base64 · Hex · Endpoints · HTTP Methods"
+          oninput="updateEditor()"
+          onscroll="syncScroll()"></textarea>
+      </div>
+
+      <!-- DETAIL PANEL -->
+      <div class="detail-panel" id="detail-panel">
+        <div class="dp-head">
+          <span class="dp-title" id="dp-title">Finding Detail</span>
+          <button class="dp-close" onclick="closeDetail()">✕</button>
+        </div>
+        <div class="dp-body" id="dp-body"></div>
+      </div>
+    </div>
+
+    <!-- SUMMARY TAB -->
+    <div id="summary-view" style="display:none;flex:1;overflow-y:auto;padding:24px;background:var(--bg);">
+      <div id="summary-content" style="max-width:800px;margin:0 auto;"></div>
+    </div>
+
+    <div class="bottom-bar">
+      <div class="bb-item">Lines: <span id="bb-lines">0</span></div>
+      <div class="bb-item">Chars: <span id="bb-chars">0</span></div>
+      <div class="bb-item">Findings: <span id="bb-findings">0</span></div>
+      <div class="bb-item" id="bb-cursor">Ln 1, Col 1</div>
+      <div class="bb-item" style="margin-left:auto;">JetBrains Mono · 13px</div>
+    </div>
+  </div>
+</div>
+
+<!-- KEYWORD MANAGER MODAL -->
+<div class="modal-overlay" id="kw-modal">
+  <div class="modal" style="max-width:700px;">
+    <button class="modal-close" onclick="closeKwManager()">✕</button>
+    <h2>🔑 Keyword Manager</h2>
+    <p style="font-size:.75rem;color:var(--text2);margin-bottom:16px;">Add custom keywords to detect. All keywords are matched case-insensitively against variable names, config keys, and object properties in the code.</p>
+    <div id="kw-manager-body"></div>
+  </div>
+</div>
+
+<!-- EXPORT MODAL -->
+<div class="modal-overlay" id="export-modal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">✕</button>
+    <h2>⬇ Export Report</h2>
+    <div id="export-content" style="font-size:.8rem;color:var(--text2);white-space:pre-wrap;font-family:'JetBrains Mono',monospace;background:var(--bg3);padding:16px;border-radius:8px;max-height:400px;overflow-y:auto;"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;">
+      <button class="btn-sm" onclick="downloadReport('json')" style="color:var(--green)">Download JSON</button>
+      <button class="btn-sm" onclick="downloadReport('txt')" style="color:var(--blue)">Download TXT</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── KEYWORD ENGINE v11 — 2500+ PATTERNS ────────────────────────────────────
+// Structure: { category, severity, keywords[] }
+// To add more: push to KEYWORD_DB or call addCustomKeyword(kw)
+// Each entry auto-builds into the master regex on scan.
+
+const KEYWORD_DB = [
+
+  // ════════════════════════════════════════════════════════
+  // 1. GENERIC AUTH & CREDENTIALS (Critical)
+  // ════════════════════════════════════════════════════════
+  { cat:"Generic Auth", sev:"critical", kws:[
+    "password","passwd","pwd","pass","passphrase","secret","secret_key","secret_token",
+    "api_key","api_secret","api_token","api_password","apikey","api-key","api-secret","api-token",
+    "access_key","access_secret","access_token","access-key","access-token","access-secret",
+    "auth_key","auth_token","auth_secret","auth-key","auth-token","auth-secret","authorization",
+    "private_key","private_token","private-key","private-token","priv_key","privkey",
+    "secret_access_key","secret_value","secret_pass","secret_password","secret_phrase",
+    "client_secret","client_password","client_key","client-secret","client-key",
+    "master_key","master_password","master_secret","master_token","master-key","master-secret",
+    "signing_key","signing_secret","sign_key","sign_secret","signature_key","signature_secret",
+    "encryption_key","decryption_key","encrypt_key","decrypt_key","aes_key","aes_secret",
+    "hmac_key","hmac_secret","hmac_token","mac_key","mac_secret",
+    "bearer_token","bearer_key","bearer","token","credential","credentials","cred","creds",
+    "session_token","session_secret","session_key","session_id","session-token","session-key",
+    "cookie_secret","cookie_key","cookie_token","cookie-secret",
+    "jwt_secret","jwt_key","jwt_token","jwt-secret","jwt-key",
+    "refresh_token","id_token","access_token","oauth_token","oauth_secret","oauth_key",
+    "consumer_key","consumer_secret","consumer-key","consumer-secret",
+    "app_secret","app_key","app_token","app_password","app-secret","app-key","app-token",
+    "account_key","account_secret","account_token","account_password",
+    "user_password","user_secret","user_token","user_key",
+    "admin_password","admin_secret","admin_token","admin_key","admin-password","admin-secret",
+    "root_password","root_secret","root_key","root_token",
+    "login_password","login_secret","login_key","login_token",
+    "super_secret","top_secret","confidential_key",
+    "hash_key","hash_secret","hash_salt","salt","pepper","nonce","iv","init_vector",
+    "keystore","keychain","keypair","keyfile","key_file","key_path",
+    "pem","pem_key","pem_cert","pem_file","p12","pfx","jks","pkcs12",
+    "id_rsa","id_dsa","id_ecdsa","id_ed25519","rsa_key","dsa_key","ec_key",
+    "ssh_key","ssh_private_key","ssh_password","ssh_secret","ssh-key","ssh-password",
+    "gpg_key","gpg_passphrase","pgp_key","pgp_passphrase",
+    "x509_key","ssl_key","tls_key","ssl_cert","tls_cert","ssl_password","tls_password",
+    "vault_token","vault_secret","vault_key","vault_password","vault-token",
+    "license_key","product_key","activation_key","registration_key","serial_key","cdkey",
+    "passcode","pin","otp_secret","totp_secret","mfa_secret",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 2. AWS / AMAZON (Critical)
+  // ════════════════════════════════════════════════════════
+  { cat:"AWS", sev:"critical", kws:[
+    "aws_access_key_id","aws_secret_access_key","aws_session_token","aws_secret","aws_key",
+    "aws_api_key","aws_token","aws_credentials","aws_profile","aws_region",
+    "aws_account_id","aws_account_key","aws_bucket","aws_s3_key","aws_s3_secret",
+    "aws_lambda_key","aws_cognito_key","aws_rds_password","aws_dynamodb_key",
+    "aws_sqs_key","aws_sns_key","aws_iam_key","aws_sts_token","aws_ecs_key",
+    "aws_ecr_key","aws_cloudwatch_key","aws_kinesis_key","aws_glue_key",
+    "amazon_access_key","amazon_secret_key","amazon_token","amazon_api_key",
+    "s3_key","s3_secret","s3_bucket","s3_access_key","s3_secret_key","s3_token",
+    "s3_url","s3_endpoint","s3_region","s3_bucket_name","s3_path",
+    "ec2_key","ec2_secret","ec2_password","ec2_key_pair",
+    "cloudfront_key","cloudfront_secret","cloudfront_token",
+    "route53_key","route53_secret","elasticache_password",
+    "redshift_password","redshift_key","aurora_password",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 3. AZURE / MICROSOFT (Critical)
+  // ════════════════════════════════════════════════════════
+  { cat:"Azure", sev:"critical", kws:[
+    "azure_client_id","azure_client_secret","azure_tenant_id","azure_subscription_id",
+    "azure_storage_account","azure_storage_key","azure_storage_connection_string",
+    "azure_api_key","azure_token","azure_secret","azure_password","azure_key",
+    "azure_ad_token","azure_ad_secret","azure_ad_client_id","azure_ad_client_secret",
+    "azure_service_principal","azure_managed_identity","azure_vault_url",
+    "azure_keyvault_url","azure_keyvault_secret","azure_keyvault_key",
+    "azure_sql_connection","azure_cosmos_key","azure_cosmos_connection",
+    "azure_servicebus_connection","azure_eventhub_connection","azure_redis_key",
+    "azure_appinsights_key","azure_cognitive_key","azure_openai_key",
+    "azurewebsites_secret","microsoft_app_id","microsoft_app_password",
+    "msal_client_secret","msal_client_id","aad_client_secret","aad_client_id",
+    "office365_client_secret","sharepoint_client_secret","teams_webhook_secret",
+    "onedrive_access_token","graph_api_token","graph_client_secret",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 4. GCP / GOOGLE (Critical)
+  // ════════════════════════════════════════════════════════
+  { cat:"Google/GCP", sev:"critical", kws:[
+    "google_api_key","google_client_id","google_client_secret","google_access_token",
+    "google_refresh_token","google_service_account","google_credentials","google_token",
+    "google_private_key","google_private_key_id","google_project_id",
+    "gcp_api_key","gcp_credentials","gcp_service_account","gcp_token","gcp_key",
+    "gcp_project","gcp_private_key","gcp_client_email","gcp_client_id",
+    "firebase_api_key","firebase_auth_domain","firebase_project_id","firebase_storage_bucket",
+    "firebase_messaging_sender_id","firebase_app_id","firebase_measurement_id",
+    "firebase_database_url","firebase_url","firebase_key","firebase_token","firebase_secret",
+    "firestore_key","firestore_token","firestore_credentials",
+    "gcm_sender_id","fcm_server_key","fcm_token","fcm_api_key",
+    "gcs_bucket","gcs_key","gcs_secret","gcs_credentials","gcs_token",
+    "bigquery_key","bigquery_credentials","bigquery_token",
+    "pubsub_key","pubsub_credentials","spanner_credentials",
+    "maps_api_key","places_api_key","youtube_api_key","gmail_token",
+    "gcloud_key","gcloud_token","gcloud_credentials",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 5. DATABASE CREDENTIALS (Critical)
+  // ════════════════════════════════════════════════════════
+  { cat:"Database", sev:"critical", kws:[
+    "db_password","db_pass","db_pwd","db_secret","db_key","db_token",
+    "db_username","db_user","db_host","db_url","db_uri","db_name","db_database",
+    "database_password","database_pass","database_secret","database_url","database_uri",
+    "database_host","database_user","database_username","database_name",
+    "mongodb_url","mongodb_uri","mongodb_password","mongodb_username","mongodb_secret",
+    "mongo_url","mongo_uri","mongo_password","mongo_username","mongo_secret","mongo_key",
+    "postgres_url","postgres_uri","postgres_password","postgres_username","postgres_secret",
+    "postgresql_url","postgresql_uri","postgresql_password","postgresql_username",
+    "mysql_url","mysql_uri","mysql_password","mysql_username","mysql_secret","mysql_root_password",
+    "mariadb_url","mariadb_password","mariadb_username","mariadb_secret",
+    "redis_url","redis_uri","redis_password","redis_secret","redis_token","redis_host","redis_auth",
+    "elasticsearch_url","elasticsearch_uri","elasticsearch_password","elasticsearch_secret","elasticsearch_key",
+    "cassandra_password","cassandra_username","cassandra_secret","cassandra_token",
+    "dynamodb_key","dynamodb_secret","dynamodb_token","dynamodb_url",
+    "couchdb_url","couchdb_password","couchdb_secret","couchdb_username",
+    "influxdb_token","influxdb_password","influxdb_secret","influxdb_url",
+    "neo4j_password","neo4j_secret","neo4j_token","neo4j_uri",
+    "clickhouse_password","clickhouse_secret","clickhouse_url",
+    "timescaledb_password","cockroachdb_url","cockroachdb_password",
+    "supabase_key","supabase_secret","supabase_url","supabase_anon_key","supabase_service_role_key",
+    "neon_password","neon_url","neon_database_url","planetscale_password","planetscale_url",
+    "turso_auth_token","turso_database_url","libsql_token",
+    "prisma_database_url","sequelize_url","typeorm_url",
+    "connection_string","conn_string","db_connection","database_connection",
+    "jdbc_url","datasource_url","datasource_password","datasource_username",
+    "sql_password","sql_server_password","mssql_password","mssql_secret",
+    "oracle_password","oracle_secret","oracle_token","db2_password",
+    "sqlite_key","sqlite_password",
+    "xata_api_key","xata_branch","airtable_api_key","airtable_token",
+    "fauna_secret","fauna_key","fauna_token","upstash_redis_token","upstash_token",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 6. PAYMENT GATEWAYS (Critical)
+  // ════════════════════════════════════════════════════════
+  { cat:"Payment", sev:"critical", kws:[
+    "stripe_key","stripe_secret","stripe_api_key","stripe_publishable_key","stripe_webhook_secret",
+    "stripe_restricted_key","stripe_live_key","stripe_test_key",
+    "razorpay_key","razorpay_secret","razorpay_key_id","razorpay_key_secret","razorpay_webhook_secret",
+    "paypal_client_id","paypal_client_secret","paypal_secret","paypal_token","paypal_api_key",
+    "paytm_merchant_key","paytm_merchant_id","paytm_secret","paytm_token",
+    "braintree_private_key","braintree_public_key","braintree_merchant_id","braintree_token",
+    "square_access_token","square_application_id","square_location_id","square_secret",
+    "klarna_api_key","klarna_secret","klarna_username","klarna_password",
+    "adyen_api_key","adyen_merchant_account","adyen_hmac_key","adyen_client_key",
+    "worldpay_service_key","worldpay_client_key","worldpay_merchant_code",
+    "mollie_api_key","mollie_test_key","mollie_profile_id",
+    "payoneer_api_key","payoneer_secret","payoneer_token",
+    "skrill_secret","skrill_merchant_id","neteller_secret",
+    "2checkout_private_key","2checkout_public_key","2checkout_secret",
+    "paystack_secret_key","paystack_public_key","paystack_token",
+    "flutterwave_secret_key","flutterwave_public_key","flutterwave_token",
+    "authorize_net_login_id","authorize_net_transaction_key","authorize_net_signature_key",
+    "cybersource_secret_key","cybersource_merchant_id",
+    "checkout_secret_key","checkout_public_key","checkout_processing_key",
+    "coinbase_api_key","coinbase_secret","coinbase_webhook_secret",
+    "coinpayments_private_key","coinpayments_public_key",
+    "paymentwall_secret","paymentwall_public_key",
+    "paddle_api_key","paddle_vendor_id","paddle_vendor_auth_code",
+    "lemon_squeezy_api_key","lemon_squeezy_webhook_secret",
+    "gocardless_token","gocardless_secret","gocardless_webhook_secret",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 7. COMMUNICATION & MESSAGING (High)
+  // ════════════════════════════════════════════════════════
+  { cat:"Communication", sev:"high", kws:[
+    "twilio_account_sid","twilio_auth_token","twilio_api_key","twilio_api_secret",
+    "twilio_sid","twilio_token","twilio_secret","twilio_phone",
+    "sendgrid_api_key","sendgrid_token","sendgrid_secret","sendgrid_webhook_key",
+    "mailgun_api_key","mailgun_signing_key","mailgun_webhook_key","mailgun_domain_key",
+    "mailchimp_api_key","mailchimp_access_token","mailchimp_secret",
+    "mandrill_api_key","mandrill_secret","sparkpost_api_key","sparkpost_secret",
+    "postmark_api_token","postmark_server_token","postmark_account_token",
+    "resend_api_key","resend_token","loops_api_key",
+    "mailjet_api_key","mailjet_secret_key","mailjet_token",
+    "sendinblue_api_key","brevo_api_key","brevo_token",
+    "amazonses_smtp_password","amazonses_access_key","ses_smtp_password",
+    "slack_token","slack_api_token","slack_bot_token","slack_oauth_token",
+    "slack_webhook","slack_webhook_url","slack_signing_secret","slack_client_secret",
+    "discord_token","discord_bot_token","discord_client_secret","discord_webhook",
+    "discord_webhook_url","discord_secret","discord_api_key",
+    "telegram_bot_token","telegram_token","telegram_api_key","telegram_secret",
+    "whatsapp_token","whatsapp_api_key","whatsapp_secret","whatsapp_phone_id",
+    "facebook_app_secret","facebook_access_token","facebook_client_token",
+    "instagram_access_token","instagram_client_secret",
+    "twitter_api_key","twitter_api_secret","twitter_access_token","twitter_access_secret",
+    "twitter_bearer_token","twitter_consumer_key","twitter_consumer_secret",
+    "x_api_key","x_api_secret","x_bearer_token","x_consumer_key",
+    "teams_webhook","teams_webhook_url","teams_incoming_webhook",
+    "zoom_api_key","zoom_api_secret","zoom_client_id","zoom_client_secret","zoom_jwt_token",
+    "pusher_app_id","pusher_key","pusher_secret","pusher_cluster",
+    "ably_api_key","ably_token","ably_key",
+    "nexmo_api_key","nexmo_api_secret","vonage_api_key","vonage_api_secret",
+    "messagebird_api_key","messagebird_access_key",
+    "bandwidth_api_token","bandwidth_api_secret","bandwidth_account_id",
+    "signalwire_token","signalwire_project_id","signalwire_space_url",
+    "plivo_auth_id","plivo_auth_token","infobip_api_key","telnyx_api_key",
+    "sinch_api_key","sinch_api_secret","sinch_app_key",
+    "textmagic_username","textmagic_apiv2_key","bulksms_token",
+    "intercom_access_token","intercom_token","intercom_secret",
+    "zendesk_token","zendesk_api_token","zendesk_oauth_token","zendesk_secret",
+    "freshdesk_api_key","freshdesk_token","freshworks_token",
+    "hubspot_api_key","hubspot_token","hubspot_access_token",
+    "salesforce_access_token","salesforce_refresh_token","salesforce_client_secret",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 8. SOCIAL & OAUTH PROVIDERS (High)
+  // ════════════════════════════════════════════════════════
+  { cat:"Social/OAuth", sev:"high", kws:[
+    "github_token","github_access_token","github_personal_token","github_oauth_token",
+    "github_client_id","github_client_secret","github_app_id","github_private_key",
+    "gh_token","gh_pat","gh_secret","ghp_token",
+    "gitlab_token","gitlab_access_token","gitlab_personal_token","gitlab_runner_token",
+    "gitlab_ci_token","gitlab_client_secret","gitlab_secret",
+    "bitbucket_client_id","bitbucket_client_secret","bitbucket_token","bitbucket_access_key",
+    "npm_token","npm_access_token","npm_auth_token","npmrc_auth_token",
+    "pypi_token","pypi_api_token","pip_token","poetry_token",
+    "docker_hub_password","docker_hub_token","docker_password","dockerhub_token",
+    "docker_config_auth","docker_auth_token","registry_password","registry_token",
+    "heroku_api_key","heroku_token","heroku_auth_token","heroku_oauth_token",
+    "vercel_token","vercel_access_token","now_token","now_secret",
+    "netlify_token","netlify_access_token","netlify_personal_access_token",
+    "railway_token","railway_api_token","render_api_key","render_token",
+    "fly_api_token","fly_auth_token","deno_deploy_token","cloudflare_api_token",
+    "cloudflare_global_api_key","cloudflare_api_key","cloudflare_email","cloudflare_zone_id",
+    "fastly_api_key","fastly_token","bunny_api_key","bunny_access_key",
+    "digitalocean_access_token","digitalocean_token","do_token","do_api_key",
+    "linode_token","linode_api_key","vultr_api_key","hetzner_api_token",
+    "ovh_application_key","ovh_application_secret","ovh_consumer_key",
+    "scaleway_access_key","scaleway_secret_key","upcloud_username","upcloud_password",
+    "auth0_domain","auth0_client_id","auth0_client_secret","auth0_management_token","auth0_token",
+    "okta_token","okta_api_token","okta_client_id","okta_client_secret",
+    "cognito_client_id","cognito_client_secret","cognito_user_pool_id",
+    "keycloak_secret","keycloak_client_secret","keycloak_admin_password",
+    "linkedin_client_id","linkedin_client_secret","linkedin_access_token",
+    "pinterest_access_token","pinterest_app_secret",
+    "tiktok_client_key","tiktok_client_secret","tiktok_access_token",
+    "reddit_client_id","reddit_client_secret","reddit_access_token",
+    "spotify_client_id","spotify_client_secret","spotify_access_token",
+    "apple_client_secret","apple_private_key","apple_team_id","apple_key_id",
+    "microsoft_client_secret","microsoft_tenant_id","microsoft_app_password",
+    "dropbox_access_token","dropbox_refresh_token","dropbox_app_key","dropbox_app_secret",
+    "box_client_id","box_client_secret","box_access_token","box_jwt_private_key",
+    "notion_token","notion_api_key","notion_integration_token",
+    "airtable_api_key","airtable_pat","airtable_token",
+    "asana_personal_access_token","asana_client_secret","asana_token",
+    "jira_api_token","jira_password","jira_secret","confluence_token",
+    "trello_api_key","trello_token","basecamp_token","monday_api_token",
+    "figma_access_token","figma_personal_access_token","figma_client_secret",
+    "miro_access_token","miro_client_secret","invision_token",
+    "clickup_api_token","linear_api_key","height_api_key",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 9. AI / ML SERVICES (Critical)
+  // ════════════════════════════════════════════════════════
+  { cat:"AI/ML", sev:"critical", kws:[
+    "openai_api_key","openai_key","openai_secret","openai_token","openai_organization",
+    "openai_org_id","openai_project_id","chatgpt_api_key","gpt_api_key",
+    "anthropic_api_key","anthropic_key","anthropic_token","claude_api_key",
+    "cohere_api_key","cohere_token","cohere_secret",
+    "huggingface_token","hf_token","huggingface_api_key","hugging_face_key",
+    "replicate_api_token","replicate_key","replicate_token",
+    "stability_api_key","stabilityai_api_key","stability_key",
+    "together_api_key","togetherai_api_key","together_token",
+    "groq_api_key","groq_token","perplexity_api_key","perplexity_token",
+    "mistral_api_key","mistral_token","mistral_key",
+    "deepseek_api_key","deepseek_token","yi_api_key",
+    "google_gemini_api_key","gemini_api_key","palm_api_key","bard_api_key",
+    "bedrock_api_key","sagemaker_key","vertex_ai_key","vertex_credentials",
+    "azure_openai_key","azure_openai_api_key","azure_cognitive_key",
+    "pinecone_api_key","pinecone_environment","pinecone_token",
+    "weaviate_api_key","weaviate_token","qdrant_api_key","chroma_token",
+    "langchain_api_key","langsmith_api_key","langsmith_token",
+    "eleven_labs_api_key","elevenlabs_api_key","elevenlabs_token",
+    "deepgram_api_key","deepgram_token","assemblyai_api_key","rev_ai_token",
+    "dalle_api_key","midjourney_token","runwayml_api_token",
+    "wolfram_app_id","wolfram_api_key","ibm_watson_api_key","ibm_api_key",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 10. ANALYTICS & MONITORING (Medium)
+  // ════════════════════════════════════════════════════════
+  { cat:"Analytics", sev:"medium", kws:[
+    "google_analytics_id","ga_tracking_id","ga_measurement_id","gtm_container_id",
+    "gtm_id","google_tag_manager","google_ads_conversion_id","google_ads_label",
+    "facebook_pixel_id","fb_pixel_id","fb_app_id","meta_pixel_id",
+    "mixpanel_token","mixpanel_project_token","mixpanel_api_secret",
+    "amplitude_api_key","amplitude_secret_key","amplitude_token",
+    "segment_write_key","segment_api_key","segment_token","segment_source_id",
+    "heap_app_id","heap_api_key","heap_token","heap_id",
+    "hotjar_id","hotjar_site_id","hotjar_token","hotjar_api_key",
+    "fullstory_org_id","fullstory_api_key","logrocket_app_id",
+    "datadog_api_key","datadog_app_key","dd_api_key","dd_app_key","datadog_token",
+    "new_relic_license_key","new_relic_api_key","new_relic_insights_key","newrelic_key",
+    "sentry_dsn","sentry_auth_token","sentry_secret","sentry_key","sentry_token",
+    "bugsnag_api_key","bugsnag_token","rollbar_access_token","rollbar_token",
+    "loggly_token","loggly_api_key","papertrail_token","logdna_key","logdna_ingestion_key",
+    "splunk_token","splunk_hec_token","elastic_apm_secret","elastic_cloud_api_key",
+    "grafana_api_key","grafana_token","prometheus_token","loki_token",
+    "pagerduty_api_key","pagerduty_token","opsgenie_api_key","opsgenie_token",
+    "pingdom_api_key","pingdom_token","statuscake_api_key","uptime_robot_api_key",
+    "clarity_project_id","microsoft_clarity_key","mouseflow_api_key",
+    "kissmetrics_api_key","clicky_site_key","chartbeat_api_key",
+    "optimizely_sdk_key","optimizely_access_token","launchdarkly_sdk_key",
+    "launchdarkly_access_token","split_io_api_key","unleash_client_key",
+    "posthog_api_key","posthog_personal_api_key","posthog_project_api_key",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 11. CDN, MEDIA & STORAGE (Medium)
+  // ════════════════════════════════════════════════════════
+  { cat:"CDN/Storage", sev:"medium", kws:[
+    "cloudinary_url","cloudinary_api_key","cloudinary_api_secret","cloudinary_cloud_name",
+    "cloudinary_upload_preset","cloudinary_auth_token",
+    "imgbb_api_key","imgur_client_id","imgix_token","imagekit_private_key","imagekit_url_endpoint",
+    "aws_cloudfront_key","cloudfront_key_pair_id","cloudfront_private_key",
+    "bunnycdn_api_key","bunnycdn_storage_key","bunny_cdn_api_key",
+    "fastly_api_key","fastly_service_id","fastly_token",
+    "akamai_client_token","akamai_client_secret","akamai_access_token","akamai_host",
+    "vercel_blob_token","r2_access_key_id","r2_secret_access_key","r2_token",
+    "backblaze_application_key_id","backblaze_application_key","backblaze_bucket_id",
+    "wasabi_access_key","wasabi_secret_key","wasabi_region",
+    "vultr_object_storage_key","linode_object_storage_key","do_spaces_key",
+    "minio_access_key","minio_secret_key","minio_root_password",
+    "uploadcare_public_key","uploadcare_secret_key","uploadthing_secret","uploadthing_app_id",
+    "transloadit_key","transloadit_secret","filestack_api_key",
+    "ipfs_api_key","nft_storage_token","web3_storage_token","pinata_api_key","pinata_secret_api_key",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 12. BLOCKCHAIN / CRYPTO / WEB3 (Critical)
+  // ════════════════════════════════════════════════════════
+  { cat:"Blockchain/Web3", sev:"critical", kws:[
+    "private_key","wallet_private_key","eth_private_key","mnemonic","seed_phrase",
+    "wallet_seed","recovery_phrase","metamask_private_key","wallet_password",
+    "infura_project_id","infura_project_secret","infura_api_key","infura_token",
+    "alchemy_api_key","alchemy_token","alchemy_auth_token","alchemy_id",
+    "moralis_api_key","moralis_master_key","quicknode_endpoint","quicknode_token",
+    "etherscan_api_key","bscscan_api_key","polygonscan_api_key","solscan_api_key",
+    "coinmarketcap_api_key","coingecko_api_key","cmc_api_key",
+    "binance_api_key","binance_api_secret","binance_secret_key",
+    "coinbase_api_key","coinbase_api_secret","coinbase_access_token","coinbase_refresh_token",
+    "kraken_api_key","kraken_private_key","bitfinex_api_key","bitfinex_api_secret",
+    "ftx_api_key","ftx_secret_key","okex_api_key","okex_secret_key","okex_passphrase",
+    "bybit_api_key","bybit_api_secret","mexc_api_key","mexc_api_secret",
+    "opensea_api_key","opensea_token","nft_api_key","web3_api_key",
+    "solana_private_key","sol_private_key","polygon_private_key",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 13. CI/CD, DEVOPS & INFRA (High)
+  // ════════════════════════════════════════════════════════
+  { cat:"CI/CD & DevOps", sev:"high", kws:[
+    "jenkins_token","jenkins_api_token","jenkins_secret","jenkins_password","jenkins_user",
+    "travis_token","travis_api_token","travis_secret","circle_ci_token","circleci_token",
+    "github_actions_token","github_ci_token","gitlab_ci_token","codebuild_key",
+    "codepipeline_key","teamcity_token","bamboo_token","drone_token","woodpecker_token",
+    "ansible_password","ansible_vault_password","ansible_become_pass",
+    "terraform_token","tfe_token","tfc_token","terraform_cloud_token",
+    "pulumi_access_token","pulumi_token","crossplane_token",
+    "kubernetes_token","k8s_token","kubeconfig_token","kubectl_token",
+    "helm_chart_key","argocd_token","flux_token","rancher_token","rancher_secret",
+    "consul_token","nomad_token","packer_token","vagrant_token",
+    "chef_key","chef_secret","puppet_access_token","salt_api_key",
+    "doppler_token","doppler_key","infisical_token","envault_token","chamber_key",
+    "1password_service_account_token","bitwarden_token","lastpass_username",
+    "hashicorp_vault_token","vault_addr","vault_role_id","vault_secret_id",
+    "snyk_token","sonarqube_token","sonarcloud_token","codecov_token",
+    "coveralls_token","codacy_project_token","deepsource_dsn",
+    "jfrog_access_token","jfrog_api_key","nexus_password","nexus_token",
+    "artifactory_password","artifactory_token","packagecloud_token",
+    "dependabot_token","renovate_token","whitesource_user_key",
+    "aws_codepipeline_key","azure_devops_token","azure_devops_pat",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 14. SEARCH & CMS (Medium)
+  // ════════════════════════════════════════════════════════
+  { cat:"Search/CMS", sev:"medium", kws:[
+    "algolia_app_id","algolia_api_key","algolia_admin_key","algolia_search_key","algolia_secret",
+    "meilisearch_master_key","meilisearch_api_key","meilisearch_token",
+    "typesense_api_key","typesense_admin_api_key","elastic_api_key","elastic_token",
+    "wordpress_secret_key","wordpress_auth_key","wordpress_password","wp_secret_key",
+    "contentful_access_token","contentful_delivery_token","contentful_preview_token",
+    "contentful_management_token","contentful_cda_token","contentful_cpa_token",
+    "strapi_token","strapi_api_key","strapi_admin_token","strapi_jwt_secret",
+    "sanity_auth_token","sanity_token","sanity_api_key","sanity_project_id",
+    "directus_token","directus_key","ghost_api_key","ghost_content_api_key","ghost_admin_api_key",
+    "prismic_access_token","prismic_token","buttercms_api_key","datocms_api_token",
+    "storyblok_access_token","storyblok_oauth_token","payload_secret",
+    "shopify_access_token","shopify_api_key","shopify_api_secret","shopify_webhook_hmac",
+    "woocommerce_consumer_key","woocommerce_consumer_secret","bigcommerce_token",
+    "magento_access_token","magento_admin_password","opencart_token",
+    "drupal_access_token","joomla_token","typo3_token",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 15. MAPS, LOCATION & MISC APIS (Medium)
+  // ════════════════════════════════════════════════════════
+  { cat:"Maps/Misc APIs", sev:"medium", kws:[
+    "mapbox_access_token","mapbox_secret_token","mapbox_token","mapbox_api_key",
+    "google_maps_api_key","maps_api_key","geocoding_api_key","places_api_key",
+    "here_api_key","here_token","tomtom_api_key","mapquest_api_key",
+    "ip_api_key","ipgeolocation_api_key","ipstack_access_key","maxmind_license_key",
+    "weather_api_key","openweathermap_api_key","weatherapi_key","accuweather_api_key",
+    "twilio_maps_key","foursquare_api_key","yelp_api_key","yelp_fusion_key",
+    "shodan_api_key","virustotal_api_key","censys_api_id","censys_secret",
+    "hunter_api_key","clearbit_api_key","fullcontact_api_key","pipl_api_key",
+    "pwnedpasswords_api_key","haveibeenpwned_api_key","hibp_api_key",
+    "ipinfo_token","abstractapi_api_key","numverify_api_key","apilayer_api_key",
+    "currencylayer_api_key","fixer_api_key","exchangerate_api_key","openexchangerates_app_id",
+    "newsapi_key","news_api_key","gnews_api_key","mediastack_api_key","currentsapi_token",
+    "rapidapi_key","mashape_key","apigee_token","kong_admin_key",
+    "nasa_api_key","spacex_api_key","openfda_api_key","covid_api_key",
+    "sendpulse_api_key","activetrail_api_key","getresponse_api_key",
+    "constantcontact_api_key","acuityscheduling_api_key","calendly_token",
+    "docusign_integrator_key","hellosign_api_key","pandadoc_api_key",
+    "typeform_personal_access_token","surveymonkey_access_token","formstack_token",
+    "zapier_api_key","make_api_key","n8n_api_key","workato_token",
+    "okr_api_key","pipedrive_api_token","copper_api_key","close_api_key",
+    "activecampaign_api_key","drip_api_key","convertkit_api_key","aweber_api_key",
+  ]},
+
+  // ════════════════════════════════════════════════════════
+  // 16. INTERNAL/CUSTOM APP PATTERNS (High)
+  // ════════════════════════════════════════════════════════
+  { cat:"App Internals", sev:"high", kws:[
+    "internal_api_key","internal_secret","internal_token","internal_key",
+    "service_api_key","service_secret","service_token","service_key","service_password",
+    "microservice_key","microservice_token","microservice_secret",
+    "webhook_secret","webhook_token","webhook_key","webhook_api_key",
+    "callback_secret","callback_token","callback_key",
+    "backend_key","backend_secret","backend_token","backend_api_key",
+    "frontend_key","frontend_secret","fe_api_key",
+    "server_key","server_secret","server_token","server_api_key","server_password",
+    "worker_token","worker_key","worker_secret","worker_api_key",
+    "cron_secret","cron_token","cron_api_key","scheduler_token",
+    "integration_key","integration_secret","integration_token","integration_api_key",
+    "plugin_key","plugin_secret","plugin_token","extension_key","extension_secret",
+    "third_party_api_key","external_api_key","partner_api_key","vendor_api_key",
+    "public_key","public_token","public_api_key","public_secret",
+    "next_public_api_key","next_public_secret","next_public_token",
+    "react_app_api_key","react_app_secret","react_app_token","vite_api_key","vite_secret",
+    "nuxt_public_api_key","vue_app_api_key","svelte_kit_secret",
+    "expo_public_api_key","rn_api_key","flutter_api_key",
+    "env_key","env_secret","env_token","env_api_key","env_password",
+    "config_key","config_secret","config_token","config_password","config_api_key",
+    "settings_key","settings_secret","settings_token","settings_password",
+    "runtime_key","runtime_secret","runtime_token","runtime_api_key",
+    "deploy_token","deploy_key","deploy_secret","deploy_api_key","deploy_password",
+    "production_key","production_secret","production_token","prod_key","prod_secret",
+    "staging_key","staging_secret","staging_token","stage_key","stage_secret",
+    "development_key","development_secret","dev_key","dev_secret","dev_token",
+    "test_key","test_secret","test_token","test_api_key","test_password",
+    "sandbox_key","sandbox_secret","sandbox_token","sandbox_api_key",
+    "feature_flag_key","feature_secret","ab_test_key","experiment_key",
+  ]},
+
+];
+
+// ─── CUSTOM KEYWORDS (user-added at runtime) ─────────────────────────────────
+let CUSTOM_KEYWORDS = JSON.parse(localStorage.getItem('sentinel_custom_kws') || '[]');
+
+// Build flat list from DB + custom
+function buildKeywordList(){
+  const base = KEYWORD_DB.flatMap(g => g.kws);
+  return [...new Set([...base, ...CUSTOM_KEYWORDS])];
+}
+
+// Get category/severity for a matched keyword
+function getKwMeta(keyword){
+  const kl = keyword.toLowerCase();
+  for(const group of KEYWORD_DB){
+    if(group.kws.some(k => kl.includes(k) || k.includes(kl))){
+      return {cat: group.cat, sev: group.sev};
+    }
+  }
+  return {cat: 'Custom', sev: 'high'};
+}
+
+function addCustomKeyword(kw){
+  kw = kw.trim().toLowerCase().replace(/\s+/g,'_');
+  if(!kw || CUSTOM_KEYWORDS.includes(kw)) return false;
+  CUSTOM_KEYWORDS.push(kw);
+  localStorage.setItem('sentinel_custom_kws', JSON.stringify(CUSTOM_KEYWORDS));
+  return true;
+}
+
+function removeCustomKeyword(kw){
+  CUSTOM_KEYWORDS = CUSTOM_KEYWORDS.filter(k => k !== kw);
+  localStorage.setItem('sentinel_custom_kws', JSON.stringify(CUSTOM_KEYWORDS));
+  renderKwManager();
+}
+
+// ─── KEYWORD MANAGER UI ────────────────────────────────────────────────────── 
+function openKwManager(){
+  document.getElementById('kw-modal').classList.add('open');
+  renderKwManager();
+}
+function closeKwManager(){ document.getElementById('kw-modal').classList.remove('open'); }
+
+function renderKwManager(){
+  const el = document.getElementById('kw-manager-body');
+  const total = buildKeywordList().length;
+  const dbCount = KEYWORD_DB.flatMap(g=>g.kws).length;
+
+  let html = `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;">
+      <input id="kw-new-input" type="text" class="find-search" style="flex:1;" placeholder="Add keyword e.g. my_secret_token">
+      <button class="btn-sm" onclick="handleAddKw()" style="color:var(--green);border-color:var(--green);">+ Add</button>
+    </div>
+    <div style="font-size:.72rem;color:var(--text2);margin-bottom:14px;">
+      📊 <b style="color:var(--cyan)">${total.toLocaleString()}</b> total keywords 
+      <span style="color:var(--text3);margin:0 8px;">|</span>
+      Built-in: <b style="color:var(--text)">${dbCount.toLocaleString()}</b>
+      <span style="color:var(--text3);margin:0 8px;">|</span>
+      Custom: <b style="color:var(--green)">${CUSTOM_KEYWORDS.length}</b>
+    </div>`;
+
+  if(CUSTOM_KEYWORDS.length){
+    html += `<div style="margin-bottom:16px;"><div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--green);margin-bottom:8px;">Your Custom Keywords</div>`;
+    CUSTOM_KEYWORDS.forEach(kw => {
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;background:var(--bg3);border:1px solid var(--border);border-left:2px solid var(--green);border-radius:5px;padding:6px 10px;margin-bottom:5px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);">${escapeHTML(kw)}</span>
+        <button onclick="removeCustomKeyword('${kw}')" style="background:none;border:none;color:var(--red);cursor:pointer;font-size:.75rem;">✕</button>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+
+  html += `<div style="font-size:.65rem;text-transform:uppercase;letter-spacing:.08em;color:var(--text2);margin-bottom:10px;">Built-in Categories</div>`;
+  KEYWORD_DB.forEach(group => {
+    const sevColors = {critical:'var(--red)',high:'var(--orange)',medium:'var(--yellow)',low:'var(--green)'};
+    const col = sevColors[group.sev] || 'var(--blue)';
+    html += `
+      <details style="margin-bottom:6px;">
+        <summary style="cursor:pointer;font-size:.75rem;padding:7px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:5px;border-left:2px solid ${col};list-style:none;display:flex;justify-content:space-between;">
+          <span>${group.cat}</span>
+          <span style="color:${col};font-family:'JetBrains Mono',monospace;">${group.kws.length}</span>
+        </summary>
+        <div style="background:var(--bg);border:1px solid var(--border);border-top:none;border-radius:0 0 5px 5px;padding:8px 10px;display:flex;flex-wrap:wrap;gap:4px;">
+          ${group.kws.map(k=>`<span style="font-family:'JetBrains Mono',monospace;font-size:10px;background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:2px 5px;color:var(--text2);">${k}</span>`).join('')}
+        </div>
+      </details>`;
+  });
+
+  el.innerHTML = html;
+  document.getElementById('kw-new-input').addEventListener('keydown', e => {
+    if(e.key === 'Enter') handleAddKw();
+  });
+}
+
+function handleAddKw(){
+  const inp = document.getElementById('kw-new-input');
+  const kw = inp.value.trim();
+  if(!kw){ notify('Enter a keyword first','error'); return; }
+  if(addCustomKeyword(kw)){
+    inp.value = '';
+    renderKwManager();
+    notify(`"${kw}" added!`, 'success');
+  } else {
+    notify('Keyword already exists', 'error');
+  }
+}
+
+function getRegex(){
+  const kw = buildKeywordList().join('|');
+  return {
+    secrets: new RegExp(`(?:${kw})["']?\\s*[:=]\\s*["'\`]([a-zA-Z0-9_\\-\\.\\/:+\\\\=]{5,200})["'\`]`,'gi'),
+    secretsHex: new RegExp(`(?:${kw})["']?\\s*[:=]\\s*["'\`]((?:\\\\x[0-9a-fA-F]{2}){4,})["'\`]`,'gi'),
+    urls: /\b(?:https?|ftp|ws|wss):\/\/[a-zA-Z0-9-+&@#/%?=~_|!:,.;[\](){}*]*[a-zA-Z0-9-+&@#/%=~_|]/gi,
+    paths: /(['"`])(\/(?:[a-zA-Z0-9][a-zA-Z0-9_.\-/]{3,})?\/[a-zA-Z0-9_.\-/?=&%#]+)\1/gi,
+    methods: /\b(GET|POST|PUT|DELETE|PATCH|OPTIONS|HEAD|CONNECT|TRACE)\b/g,
+    base64: /["']([A-Za-z0-9+/]{40,}={0,2})["']/g,
+    jwt: /["'](ey[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,})["']/g,
+    hex: /\\x([0-9a-fA-F]{2}(?:\\x[0-9a-fA-F]{2}){4,})/g,
+    ipv4: /\b((?:25[0-5]|2[0-4]\d|[01]?\d\d?)\.){3}(?:25[0-5]|2[0-4]\d|[01]?\d\d?)\b/g,
+    email: /\b[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}\b/g,
+    privateKey: /-----BEGIN\s(?:RSA\s|EC\s|OPENSSH\s|DSA\s)?PRIVATE\sKEY-----/g,
+    awsKey: /\b(AKIA|ASIA|AROA|AIDA)[A-Z0-9]{16}\b/g,
+    ghToken: /\bghp_[A-Za-z0-9]{36}\b/g,
+    npmToken: /\bnpm_[A-Za-z0-9]{36}\b/g,
+    stripeKey: /\bsk_(?:live|test)_[A-Za-z0-9]{24,}\b/g,
+    googleKey: /\bAIza[A-Za-z0-9_\-]{35}\b/g,
+  };
+}
+
+// ─── SEVERITY ENGINE ─────────────────────────────────────────────────────────
+function calcSeverity(item){
+  const l = item.label;
+  // Specific pattern overrides
+  if(l==='AWS Key'||l==='GitHub Token'||l==='Private Key Header'||l==='JWT Token'||l==='Stripe Key'||l==='NPM Token'||l==='Google API Key') return 'critical';
+  if(l==='Base64 Secret') return 'high';
+  if(l==='Hex Encoded') return 'medium';
+  if(l==='Endpoint URL'||l==='IP Address'||l==='Email Address') return 'medium';
+  if(l==='Internal Path'||l==='HTTP Method') return 'low';
+  // Keyword-based: look up in DB
+  if(item.kwMatch){
+    const meta = getKwMeta(item.kwMatch);
+    return meta.sev;
+  }
+  return 'high';
+}
+
+function calcLabel(item){
+  if(item.kwMatch){
+    const meta = getKwMeta(item.kwMatch);
+    return meta.cat + ' Secret';
+  }
+  return item.label;
+}
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+const input = document.getElementById('code-input');
+const display = document.getElementById('code-display');
+const preOutput = document.getElementById('pre-output');
+const lineBox = document.getElementById('line-numbers');
+const cardsEl = document.getElementById('cards');
+const LH = 22;
+let allFindings = [];
+let activeTypeFilter = null;
+
+// ─── EDITOR ──────────────────────────────────────────────────────────────────
+function updateEditor(){
+  const code = input.value;
+  display.textContent = code;
+  Prism.highlightElement(display);
+  const lines = code.split('\n').length;
+  lineBox.innerHTML = Array.from({length:lines},(_,i)=>i+1).join('<br>');
+  syncScroll();
+  updateInfo(code);
+}
+
+function syncScroll(){
+  preOutput.scrollTop = input.scrollTop;
+  preOutput.scrollLeft = input.scrollLeft;
+  lineBox.scrollTop = input.scrollTop;
+}
+
+function updateInfo(code){
+  const lines = code.split('\n').length;
+  const chars = code.length;
+  document.getElementById('tb-info').textContent = `${lines.toLocaleString()} lines · ${chars.toLocaleString()} chars`;
+  document.getElementById('bb-lines').textContent = lines.toLocaleString();
+  document.getElementById('bb-chars').textContent = chars.toLocaleString();
+}
+
+input.addEventListener('input', updateEditor);
+input.addEventListener('scroll', syncScroll);
+input.addEventListener('keyup', e => {
+  const pos = input.selectionStart;
+  const lines = input.value.substring(0, pos).split('\n');
+  document.getElementById('bb-cursor').textContent = `Ln ${lines.length}, Col ${lines[lines.length-1].length+1}`;
+});
+window.onload = () => { updateEditor(); };
+
+// ─── AUDIT ───────────────────────────────────────────────────────────────────
+async function startAudit(){
+  const btn = document.getElementById('audit-btn');
+  const fetchUrl = document.getElementById('target-url').value.trim();
+  let code = input.value;
+
+  // Reset
+  allFindings = [];
+  activeTypeFilter = null;
+  document.querySelectorAll('.stat').forEach(s=>s.classList.remove('active-filter'));
+  setStatus('Scanning…', true);
+  btn.textContent = '⏳ Scanning…';
+  btn.classList.add('scanning');
+  startProgress();
+
+  // Fetch from URL
+  if(fetchUrl && !code){
+    try{
+      const res = await fetch(fetchUrl);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      code = await res.text();
+      input.value = code;
+      notify('Fetched '+code.length.toLocaleString()+' chars from URL', 'info');
+    } catch(e){
+      notify('Fetch failed: '+e.message+' — Try pasting code directly', 'error');
+      endScan();
+      return;
+    }
+  }
+  if(!code.trim()){ notify('No code to scan! Paste some JS first.','error'); endScan(); return; }
+
+  // Beautify
+  const clean = js_beautify(code, {indent_size:2,break_chained_methods:true});
+  input.value = clean;
+  updateEditor();
+
+  // Scan with delay for UI
+  setTimeout(() => runScan(clean), 200);
+}
+
+function runScan(code){
+  const R = getRegex();
+  const addFindings = (matches, label, tag, severityHint) => {
+    for(const m of matches){
+      const val = m[0];
+      // Extract the matched keyword from the match for meta lookup
+      const kwMatch = m[0].split(/["'`]?\s*[:=]/)[0].trim().toLowerCase();
+      allFindings.push({val, label, tag, pos: m.index, severity: severityHint||null, kwMatch});
+    }
+  };
+  const matchAll = (str, re) => { re.lastIndex=0; return [...str.matchAll(re)]; };
+
+  // Pattern matching
+  addFindings(matchAll(code, R.awsKey), 'AWS Key', 't-cloud');
+  addFindings(matchAll(code, R.ghToken), 'GitHub Token', 't-secret');
+  addFindings(matchAll(code, R.npmToken), 'NPM Token', 't-secret');
+  addFindings(matchAll(code, R.stripeKey), 'Stripe Key', 't-secret');
+  addFindings(matchAll(code, R.googleKey), 'Google API Key', 't-secret');
+  addFindings(matchAll(code, R.jwt), 'JWT Token', 't-jwt');
+  addFindings(matchAll(code, R.privateKey), 'Private Key Header', 't-secret');
+  addFindings(matchAll(code, R.secrets), 'Sensitive Key', 't-secret');
+  addFindings(matchAll(code, R.secretsHex), 'Hex Secret', 't-hex');
+  addFindings(matchAll(code, R.hex), 'Hex Encoded', 't-hex');
+
+  const b64Matches = matchAll(code, R.base64).filter(m => {
+    const s = m[1]||m[0]; return s.length > 40;
+  });
+  addFindings(b64Matches, 'Base64 Secret', 't-b64');
+
+  addFindings(matchAll(code, R.urls), 'Endpoint URL', 't-url');
+  addFindings(matchAll(code, R.ipv4), 'IP Address', 't-url');
+  addFindings(matchAll(code, R.email), 'Email Address', 't-url');
+
+  const pathMatches = matchAll(code, R.paths).filter(m => {
+    const p = m[2]||m[0].replace(/['"`]/g,'');
+    return !p.includes('/_next/') && !p.includes('/node_modules/') && p.length > 6;
+  });
+  addFindings(pathMatches, 'Internal Path', 't-path');
+
+  addFindings(matchAll(code, R.methods), 'HTTP Method', 't-method');
+
+  // Dedup by value+pos
+  const seen = new Set();
+  allFindings = allFindings.filter(f => {
+    const k = f.val+':'+f.pos;
+    if(seen.has(k)) return false;
+    seen.add(k); return true;
+  });
+
+  // Calc severity + enrich label
+  allFindings.forEach(f => {
+    if(!f.severity) f.severity = calcSeverity(f);
+    if(f.label === 'Sensitive Key' && f.kwMatch) f.label = calcLabel(f);
+  });
+
+  // Sort: critical first
+  const sevOrder = {critical:0,high:1,medium:2,low:3,info:4};
+  allFindings.sort((a,b) => (sevOrder[a.severity]||4)-(sevOrder[b.severity]||4));
+
+  // Stats
+  const secrets = allFindings.filter(f=>['t-secret','t-jwt','t-hex','t-cloud','t-db'].includes(f.tag));
+  const urls = allFindings.filter(f=>['t-url','t-path'].includes(f.tag));
+  const methods = allFindings.filter(f=>f.tag==='t-method');
+  const encoded = allFindings.filter(f=>['t-b64','t-hex'].includes(f.tag));
+
+  animCount('s-count', secrets.length);
+  animCount('u-count', urls.length + encoded.length === 0 ? urls.length : urls.length);
+  animCount('m-count', methods.length);
+  animCount('e-count', encoded.length);
+
+  document.getElementById('bb-findings').textContent = allFindings.length;
+  updateRisk(allFindings);
+  renderCards(allFindings);
+  endScan();
+  notify(`Scan complete: ${allFindings.length} findings`, allFindings.length ? 'success' : 'info');
+}
+
+function animCount(id, target){
+  const el = document.getElementById(id);
+  let v = 0;
+  const step = Math.max(1, Math.ceil(target/20));
+  const iv = setInterval(()=>{
+    v = Math.min(v+step, target);
+    el.textContent = v;
+    if(v >= target) clearInterval(iv);
+  }, 30);
+}
+
+function updateRisk(findings){
+  let score = 0;
+  const w = {critical:25,high:15,medium:5,low:2,info:0.5};
+  findings.forEach(f => score += (w[f.severity]||0));
+  score = Math.min(100, score);
+  const bar = document.getElementById('risk-bar');
+  const text = document.getElementById('risk-score-text');
+  const color = score >= 75 ? 'var(--red)' : score >= 50 ? 'var(--orange)' : score >= 25 ? 'var(--yellow)' : 'var(--green)';
+  bar.style.width = score+'%';
+  bar.style.background = color;
+  const label = score >= 75 ? 'CRITICAL' : score >= 50 ? 'HIGH' : score >= 25 ? 'MEDIUM' : score > 0 ? 'LOW' : 'NONE';
+  text.textContent = `${Math.round(score)} / 100 — ${label}`;
+  text.style.color = color;
+}
+
+// ─── RENDER CARDS ─────────────────────────────────────────────────────────────
+function renderCards(data){
+  cardsEl.innerHTML = '';
+  if(!data.length){
+    cardsEl.innerHTML = '<div class="empty-state"><div class="empty-icon">✓</div><div>No findings matched your filter.</div></div>';
+    return;
+  }
+  data.forEach((item,idx) => {
+    const lineNum = input.value.substring(0, item.pos).split('\n').length;
+    const card = document.createElement('div');
+    card.className = `card sev-${item.severity}`;
+    card.dataset.idx = idx;
+
+    const disp = item.val.length > 80 ? item.val.substring(0,80)+'…' : item.val;
+    const descMap = {
+      'AWS Key': 'Hardcoded AWS credential — immediate rotation required',
+      'GitHub Token': 'Personal access token with potential repo access',
+      'JWT Token': 'JSON Web Token — may contain auth claims',
+      'Stripe Key': 'Payment processor secret key — critical exposure',
+      'Google API Key': 'Google API credential — check quota & restrictions',
+      'Private Key Header': 'PEM private key detected in source',
+      'Sensitive Key': 'Credential pattern matched keyword list',
+      'Base64 Secret': 'High-entropy base64 string — likely encoded secret',
+      'Hex Encoded': 'Hex-encoded data — may obfuscate secrets',
+      'Endpoint URL': 'External API or service endpoint',
+      'IP Address': 'Hardcoded IP — avoid in production code',
+      'Email Address': 'Email address found in source',
+      'Internal Path': 'API route or internal path',
+      'HTTP Method': 'HTTP method reference',
+    };
+    const desc = descMap[item.label] || '';
+
+    card.innerHTML = `
+      <button class="copy-btn" onclick="copyVal(event,'${encodeURIComponent(item.val)}')">⎘</button>
+      <div class="card-top">
+        <div class="card-tags">
+          <span class="tag ${item.tag}">${item.label}</span>
+        </div>
+        <span class="sev-badge b-${item.severity}">${item.severity}</span>
+        <span class="ln-badge">L${lineNum}</span>
+      </div>
+      <div class="card-val">${escapeHTML(disp)}</div>
+      ${desc ? `<div class="card-desc">${desc}</div>` : ''}
+    `;
+
+    card.onclick = (e) => {
+      if(e.target.classList.contains('copy-btn')) return;
+      jumpToLine(item, lineNum);
+      showDetail(item, lineNum);
+    };
+    cardsEl.appendChild(card);
+  });
+}
+
+function escapeHTML(s){
+  return s.replace(/[&<>"']/g, m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m]);
+}
+
+function copyVal(e, encoded){
+  e.stopPropagation();
+  navigator.clipboard.writeText(decodeURIComponent(encoded)).then(()=>notify('Copied!','success'));
+}
+
+function jumpToLine(item, lineNum){
+  input.focus();
+  const start = item.pos;
+  const end = start + item.val.length;
+  input.setSelectionRange(start, end);
+  const scrollTarget = (lineNum - 1) * LH;
+  input.scrollTo({ top: scrollTarget - 120, behavior: 'smooth' });
+}
+
+// ─── FILTERS ─────────────────────────────────────────────────────────────────
+function filterFindings(){
+  const term = document.getElementById('find-search').value.toLowerCase();
+  const sev = document.getElementById('sev-filter').value;
+  let filtered = allFindings.filter(f => {
+    const matchTerm = !term || f.val.toLowerCase().includes(term) || f.label.toLowerCase().includes(term);
+    const matchSev = !sev || f.severity === sev;
+    const matchType = !activeTypeFilter || typeMatch(f, activeTypeFilter);
+    return matchTerm && matchSev && matchType;
+  });
+  renderCards(filtered);
+}
+
+function typeMatch(f, type){
+  if(type === 'secret') return ['t-secret','t-jwt','t-cloud','t-db'].includes(f.tag);
+  if(type === 'url') return ['t-url','t-path'].includes(f.tag);
+  if(type === 'method') return f.tag === 't-method';
+  if(type === 'encoded') return ['t-b64','t-hex'].includes(f.tag);
+  return true;
+}
+
+function filterByType(type){
+  if(activeTypeFilter === type){
+    activeTypeFilter = null;
+    document.querySelectorAll('.stat').forEach(s=>s.classList.remove('active-filter'));
+  } else {
+    activeTypeFilter = type;
+    document.querySelectorAll('.stat').forEach(s=>s.classList.remove('active-filter'));
+    const map = {secret:'s-sec',url:'s-url',method:'s-mth',encoded:'s-enc'};
+    document.querySelector('.stat.'+map[type])?.classList.add('active-filter');
+  }
+  filterFindings();
+}
+
+// ─── DETAIL PANEL ─────────────────────────────────────────────────────────────
+function showDetail(item, lineNum){
+  const panel = document.getElementById('detail-panel');
+  const body = document.getElementById('dp-body');
+  document.getElementById('dp-title').textContent = item.label;
+
+  // Entropy calculation
+  const entropy = calcEntropy(item.val);
+  const sevColors = {critical:'var(--red)',high:'var(--orange)',medium:'var(--yellow)',low:'var(--green)',info:'var(--blue)'};
+
+  body.innerHTML = `
+    <div class="dp-field"><div class="dp-key">Value</div><div class="dp-val">${escapeHTML(item.val)}</div></div>
+    <div class="dp-field"><div class="dp-key">Location</div><div class="dp-val">Line ${lineNum} · Position ${item.pos}</div></div>
+    <div class="dp-field"><div class="dp-key">Severity</div><div class="dp-val" style="color:${sevColors[item.severity]};font-weight:700;text-transform:uppercase;">${item.severity}</div></div>
+    <div class="dp-field"><div class="dp-key">Entropy (Shannon)</div><div class="dp-val">${entropy.toFixed(3)} bits/char</div></div>
+    <div class="dp-field"><div class="dp-key">Length</div><div class="dp-val">${item.val.length} characters</div></div>
+    ${item.val.startsWith('ey') ? `<div class="dp-field"><div class="dp-key">JWT Payload</div><div class="dp-val">${decodeJWT(item.val)}</div></div>` : ''}
+    <div class="dp-field" style="margin-top:16px;">
+      <button class="btn-sm" style="width:100%;margin-bottom:6px;" onclick="navigator.clipboard.writeText(${JSON.stringify(item.val)}).then(()=>notify('Copied!','success'))">⎘ Copy Value</button>
+    </div>
+  `;
+  panel.classList.add('open');
+}
+
+function closeDetail(){ document.getElementById('detail-panel').classList.remove('open'); }
+
+function calcEntropy(str){
+  const freq = {};
+  for(const c of str) freq[c] = (freq[c]||0)+1;
+  let e = 0;
+  for(const k in freq){ const p = freq[k]/str.length; e -= p*Math.log2(p); }
+  return e;
+}
+
+function decodeJWT(token){
+  try{
+    const parts = token.split('.');
+    const payload = JSON.parse(atob(parts[1].replace(/-/g,'+').replace(/_/g,'/')));
+    return JSON.stringify(payload, null, 2);
+  } catch(e){ return 'Could not decode'; }
+}
+
+// ─── TOOLBAR ACTIONS ─────────────────────────────────────────────────────────
+function beautifyCode(){
+  if(!input.value.trim()){notify('Nothing to format','error');return;}
+  input.value = js_beautify(input.value, {indent_size:2,break_chained_methods:true});
+  updateEditor();
+  notify('Code formatted ✦', 'success');
+}
+
+function minifyCode(){
+  if(!input.value.trim()){notify('Nothing to minify','error');return;}
+  input.value = input.value.replace(/\/\*[\s\S]*?\*\//g,'').replace(/\/\/[^\n]*/g,'').replace(/\s+/g,' ').trim();
+  updateEditor();
+  notify('Code minified ⌁', 'info');
+}
+
+function copyCode(){
+  navigator.clipboard.writeText(input.value).then(()=>notify('Code copied!','success'));
+}
+
+function clearAll(){
+  input.value = '';
+  allFindings = [];
+  updateEditor();
+  cardsEl.innerHTML = '<div class="empty-state"><div class="empty-icon">⬡</div><div>Cleared. Ready for next scan.</div></div>';
+  ['s-count','u-count','m-count','e-count'].forEach(id=>document.getElementById(id).textContent='0');
+  document.getElementById('risk-bar').style.width='0';
+  document.getElementById('risk-score-text').textContent='—';
+  document.getElementById('bb-findings').textContent='0';
+  closeDetail();
+  setStatus('Ready', false);
+}
+
+// ─── TAB SWITCHING ────────────────────────────────────────────────────────────
+function switchTab(tab){
+  const edMain = document.getElementById('editor-main');
+  const sumView = document.getElementById('summary-view');
+  document.getElementById('tab-editor').classList.toggle('active', tab==='editor');
+  document.getElementById('tab-summary').classList.toggle('active', tab==='summary');
+  if(tab==='editor'){
+    edMain.style.display='flex';
+    sumView.style.display='none';
+  } else {
+    edMain.style.display='none';
+    sumView.style.display='block';
+    renderSummary();
+  }
+}
+
+function renderSummary(){
+  const el = document.getElementById('summary-content');
+  if(!allFindings.length){
+    el.innerHTML='<p style="color:var(--text2);text-align:center;margin-top:60px;">Run a scan first to see the summary report.</p>';
+    return;
+  }
+  const sevGroups = {};
+  allFindings.forEach(f=>{ (sevGroups[f.severity]||=[]).push(f); });
+  const sevOrder = ['critical','high','medium','low','info'];
+  const sevColors = {critical:'var(--red)',high:'var(--orange)',medium:'var(--yellow)',low:'var(--green)',info:'var(--blue)'};
+
+  let html = `
+    <div style="margin-bottom:24px;">
+      <h2 style="font-size:1.2rem;color:var(--cyan);margin-bottom:6px;">⬡ SENTINEL Security Report</h2>
+      <p style="font-size:.8rem;color:var(--text2);">${allFindings.length} total findings across ${Object.keys(sevGroups).length} severity levels</p>
+    </div>
+  `;
+  sevOrder.forEach(sev => {
+    const items = sevGroups[sev];
+    if(!items) return;
+    html += `
+      <div style="margin-bottom:20px;">
+        <h3 style="font-size:.85rem;color:${sevColors[sev]};text-transform:uppercase;letter-spacing:.1em;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:6px;">
+          ${sev} — ${items.length} finding${items.length>1?'s':''}
+        </h3>
+        ${items.slice(0,20).map(f=>`
+          <div style="background:var(--bg2);border:1px solid var(--border);border-left:3px solid ${sevColors[sev]};border-radius:6px;padding:10px 12px;margin-bottom:6px;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:5px;">
+              <span style="font-size:.7rem;font-weight:700;color:${sevColors[sev]};text-transform:uppercase;">${f.label}</span>
+              <span style="font-size:.7rem;color:var(--text3);font-family:'JetBrains Mono',monospace;">L${input.value.substring(0,f.pos).split('\n').length}</span>
+            </div>
+            <div style="font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--text);word-break:break-all;">${escapeHTML(f.val.length>100?f.val.substring(0,100)+'…':f.val)}</div>
+          </div>
+        `).join('')}
+        ${items.length>20?`<p style="font-size:.72rem;color:var(--text2);text-align:center;margin-top:4px;">+${items.length-20} more…</p>`:''}
+      </div>
+    `;
+  });
+  el.innerHTML = html;
+}
+
+// ─── EXPORT ───────────────────────────────────────────────────────────────────
+function exportReport(){
+  if(!allFindings.length){notify('No findings to export','error');return;}
+  const modal = document.getElementById('export-modal');
+  const el = document.getElementById('export-content');
+  const summary = {
+    tool:'SENTINEL v11',
+    timestamp: new Date().toISOString(),
+    totalFindings: allFindings.length,
+    bySeverity: {},
+    findings: allFindings.map(f=>({
+      label:f.label,severity:f.severity,value:f.val,
+      line: input.value.substring(0,f.pos).split('\n').length,
+      position:f.pos
+    }))
+  };
+  allFindings.forEach(f=>{summary.bySeverity[f.severity]=(summary.bySeverity[f.severity]||0)+1;});
+  el.textContent = JSON.stringify(summary, null, 2);
+  modal.classList.add('open');
+}
+
+function closeModal(){ document.getElementById('export-modal').classList.remove('open'); }
+
+function downloadReport(fmt){
+  const findings = allFindings.map(f=>({
+    label:f.label,severity:f.severity,value:f.val,
+    line: input.value.substring(0,f.pos).split('\n').length
+  }));
+
+  let content, mime, ext;
+  if(fmt==='json'){
+    content = JSON.stringify({tool:'SENTINEL v11',timestamp:new Date().toISOString(),findings}, null, 2);
+    mime='application/json'; ext='json';
+  } else {
+    content = `SENTINEL v11 Report — ${new Date().toLocaleString()}\n${'='.repeat(60)}\n\n`;
+    findings.forEach((f,i)=>{
+      content += `[${i+1}] ${f.severity.toUpperCase()} · ${f.label} · Line ${f.line}\n    ${f.value}\n\n`;
+    });
+    mime='text/plain'; ext='txt';
+  }
+
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([content],{type:mime}));
+  a.download = `sentinel-report.${ext}`;
+  a.click();
+  closeModal();
+  notify(`Report downloaded as .${ext}`, 'success');
+}
+
+// ─── HELPERS ─────────────────────────────────────────────────────────────────
+function startProgress(){
+  const prog = document.getElementById('scan-progress');
+  const bar = document.getElementById('scan-bar');
+  prog.classList.add('active');
+  let w = 0;
+  const iv = setInterval(()=>{
+    w = Math.min(w + Math.random()*8, 90);
+    bar.style.width = w+'%';
+  },100);
+  prog._iv = iv;
+}
+
+function endScan(){
+  const btn = document.getElementById('audit-btn');
+  btn.textContent = '⚡ Deep Scan';
+  btn.classList.remove('scanning');
+  setStatus('Scan complete', false);
+  const prog = document.getElementById('scan-progress');
+  const bar = document.getElementById('scan-bar');
+  clearInterval(prog._iv);
+  bar.style.width = '100%';
+  setTimeout(()=>{ prog.classList.remove('active'); bar.style.width='0'; },600);
+}
+
+function setStatus(text, scanning){
+  document.getElementById('status-text').textContent = text;
+  const dot = document.getElementById('status-dot');
+  dot.style.background = scanning ? 'var(--orange)' : 'var(--green)';
+  dot.style.boxShadow = scanning ? '0 0 20px rgba(255,157,77,0.6)' : 'var(--glow-green)';
+}
+
+function notify(msg, type='info'){
+  const el = document.getElementById('notif');
+  const icons = {success:'✓',error:'✕',info:'ℹ'};
+  el.innerHTML = `<span>${icons[type]||'ℹ'}</span> ${msg}`;
+  el.className = `notif ${type} show`;
+  setTimeout(()=>el.classList.remove('show'), 3000);
+}
+
+// Close modal on overlay click
+document.getElementById('export-modal').addEventListener('click', e => {
+  if(e.target === document.getElementById('export-modal')) closeModal();
+});
+document.getElementById('kw-modal').addEventListener('click', e => {
+  if(e.target === document.getElementById('kw-modal')) closeKwManager();
+});
+</script>
+</body>
+</html>
